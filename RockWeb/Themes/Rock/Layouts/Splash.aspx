@@ -1,4 +1,4 @@
-﻿<%@ Page ValidateRequest="false" Language="C#" AutoEventWireup="true" Inherits="Rock.Web.UI.RockPage" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" Inherits="Rock.Web.UI.RockPage" %>
 <!DOCTYPE html> 
 <html>
 <head runat="server">
@@ -38,7 +38,7 @@
             $(document).ready(function () {
                 $("#content").rockFadeIn();
             });
-    </script>
+        </script>
 
     </form>
 </body>

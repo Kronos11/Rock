@@ -714,14 +714,17 @@ namespace Rock.Web.UI
         }
 
         /// <summary>
-        /// Resolves a rock URL.  Similar to the <see cref="System.Web.UI.Control"/> ResolveUrl method except that you can prefix 
+        /// Resolves a rock URL.  Similar to the <see cref="System.Web.UI.Control" /> ResolveUrl method except that you can prefix
         /// a Url with '~~' to indicate a virtual path to Rock's current theme root folder
         /// </summary>
-        /// <param name="url">A <see cref="System.String"/> representing the Url to resolve.</param>
-        /// <returns>A <see cref="System.String"/> that represents the resolved Url.</returns>
-        public string ResolveRockUrl( string url )
+        /// <param name="url">A <see cref="System.String" /> representing the Url to resolve.</param>
+        /// <param name="includeRoot">if set to <c>true</c> [include root].</param>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents the resolved Url.
+        /// </returns>
+        public string ResolveRockUrl( string url, bool includeRoot = false )
         {
-            return RockPage.ResolveRockUrl( url );
+            return RockPage.ResolveRockUrl( url, includeRoot );
         }
 
         /// <summary>
@@ -858,8 +861,8 @@ namespace Rock.Web.UI
                     HtmlGenericControl aMoveBlock = new HtmlGenericControl( "a" );
                     aMoveBlock.Attributes.Add( "class", "block-move block-move" );
                     aMoveBlock.Attributes.Add( "href", _blockCache.Id.ToString() );
-                    aMoveBlock.Attributes.Add( "zone", _blockCache.Zone );
-                    aMoveBlock.Attributes.Add( "zoneloc", _blockCache.BlockLocation.ToString() );
+                    aMoveBlock.Attributes.Add( "data-zone", _blockCache.Zone );
+                    aMoveBlock.Attributes.Add( "data-zone-location", _blockCache.BlockLocation.ToString() );
                     aMoveBlock.Attributes.Add( "title", "Move Block" );
                     configControls.Add( aMoveBlock );
                     HtmlGenericControl iMoveBlock = new HtmlGenericControl( "i" );

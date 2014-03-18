@@ -122,7 +122,7 @@ $('.filter-item-select').click(function (event) {
                         RockPage rockPage = this.Page as RockPage;
                         if ( rockPage != null )
                         {
-                            foreach ( var component in DataFilterContainer.GetComponentsByFilteredEntityName( value ).OrderBy( c => c.Order ).ThenBy( c => c.Section ) )
+                            foreach ( var component in DataFilterContainer.GetComponentsByFilteredEntityName( value ).OrderBy( c => c.Order ).ThenBy( c => c.Section ).ThenBy( c => c.GetTitle(FilteredEntityType)) )
                             {
                                 if ( component.IsAuthorized( "View", rockPage.CurrentPerson ) )
                                 {
@@ -142,6 +142,25 @@ $('.filter-item-select').click(function (event) {
                 }
 
                 RecreateChildControls();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the data view filter unique identifier.
+        /// </summary>
+        /// <value>
+        /// The data view filter unique identifier.
+        /// </value>
+        public Guid DataViewFilterGuid
+        {
+            get
+            {
+                return ViewState["DataViewFilterGuid"] as Guid? ?? Guid.NewGuid();
+            }
+
+            set
+            {
+                ViewState["DataViewFilterGuid"] = value;
             }
         }
 
@@ -370,7 +389,7 @@ $('.filter-item-select').click(function (event) {
             writer.AddAttribute( HtmlTextWriterAttribute.Class, "pull-right" );
             writer.RenderBeginTag( HtmlTextWriterTag.Div );
             
-            writer.AddAttribute( HtmlTextWriterAttribute.Class, "btn btn-xs filter-view-state" );
+            writer.AddAttribute( HtmlTextWriterAttribute.Class, "btn btn-link btn-xs filter-view-state" );
             writer.RenderBeginTag( HtmlTextWriterTag.A );
             writer.AddAttribute( HtmlTextWriterAttribute.Class, Expanded ? "fa fa-chevron-up" : "fa fa-chevron-down" );
             writer.RenderBeginTag( HtmlTextWriterTag.I );

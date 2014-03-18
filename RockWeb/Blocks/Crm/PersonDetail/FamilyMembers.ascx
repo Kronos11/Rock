@@ -9,7 +9,7 @@
                 <div class="persondetails-family rollover-container">
 
                     <div class="actions rollover-item">
-                        <asp:HyperLink ID="hlEditFamily" runat="server" CssClass="edit btn btn-link btn-xs"><i class="fa fa-pencil"></i> Edit Family</asp:HyperLink>
+                        <asp:HyperLink ID="hlEditFamily" runat="server" CssClass="edit btn btn-action btn-xs"><i class="fa fa-pencil"></i> Edit Family</asp:HyperLink>
                     </div>
 
                     <div class="row">
@@ -24,7 +24,7 @@
                                     <ItemTemplate>
                                         <li class="member">
                                             <a href='<%# FormatPersonLink(Eval("PersonId").ToString()) %>'>
-                                                <asp:Image ID="imgPerson" runat="server" />
+                                                <div class="person-image" id="divPersonImage" runat="server"></div>
                                                 <div>
                                                     <h4><%# Eval("Person.NickName") %></h4>
                                                     <small class="age"><%# Eval("Person.Age")  %></small>
@@ -54,14 +54,10 @@
                                                 <asp:PlaceHolder ID="phStreet2" runat="server" />
                                                 <span><%# Eval("Location.City") %>, <%# Eval("Location.State") %> <%# Eval("Location.Zip") %></span>
                                             </div>
-                                            <div class="actions rollover-item">
-                                                <asp:LinkButton ID="lbGeocode" runat="server">
+                                            <div class="pull-left rollover-item">
+                                                <asp:LinkButton ID="lbVerify" runat="server">
                                                     <i class="fa fa-globe"></i>
                                                 </asp:LinkButton>
-                                                <asp:LinkButton ID="lbStandardize" runat="server">
-                                                    <i class="fa fa-magic"></i>
-                                                </asp:LinkButton>
-                                                <a title="Address Standardized" href="../Blocks/Crm/PersonDetail/#"></a>
                                             </div>
                                         </li>
                                     </ItemTemplate>

@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.Data;
 using System;
 using System.Diagnostics;
+using Rock.Web.Cache;
 
 namespace Rock.PersonProfile.Badge
 {
@@ -44,20 +45,15 @@ namespace Rock.PersonProfile.Badge
     [BooleanField("Annimate Bars", "Determine whether bars should annimate when displayed.", true)]
     public class FamilyAttendance : BadgeComponent
     {
-
         /// <summary>
         /// Renders the specified writer.
         /// </summary>
         /// <param name="badge">The badge.</param>
         /// <param name="writer">The writer.</param>
-        public override void Render( PersonBadge badge, System.Web.UI.HtmlTextWriter writer )
+        public override void Render( PersonBadgeCache badge, System.Web.UI.HtmlTextWriter writer )
         {
-            int minBarHeight = 2;
-
-            if (GetAttributeValue(badge, "MinimumBarHeight") != null)
-            {
-                Int32.Parse(GetAttributeValue(badge, "MinimumBarHeight"));
-            }
+            int minBarHeight = GetAttributeValue(badge, "MinimumBarHeight").AsInteger(false) ?? 2;
+            int monthsToDisplay = GetAttributeValue(badge, "MonthsToDisplay").AsInteger(false) ?? 24;
             
             string annimateClass = string.Empty;
 
@@ -66,13 +62,13 @@ namespace Rock.PersonProfile.Badge
                 annimateClass = " annimate";
             }
 
-            writer.Write(String.Format("<div class='badge badge-attendance{0}' data-original-title='Family attendance for the last 24 months. Each bar is a month.'>", annimateClass));
+            writer.Write(String.Format("<div class='badge badge-attendance{0} badge-id-{1}' data-original-title='Family attendance for the last 24 months. Each bar is a month.'>", annimateClass, badge.Id));
 
             writer.Write("</div>");
 
-            writer.Write(String.Format(@"
+            writer.Write(String.Format( @"
                 <script>
-                    $( document ).ready(function() {{
+                    Sys.Application.add_load(function () {{
                         
                         var monthNames = [ 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December' ];
                         
@@ -93,7 +89,7 @@ namespace Rock.PersonProfile.Badge
                                             }});
                                             chartHtml += '</ul>';
                                             
-                                            $('.badge-attendance').html(chartHtml);
+                                            $('.badge-attendance.badge-id-{3}').html(chartHtml);
 
                                         }}
                                 }},
@@ -101,7 +97,7 @@ namespace Rock.PersonProfile.Badge
                     }});
                 </script>
                 
-            ", Person.Id.ToString(), GetAttributeValue(badge, "MonthsToDisplay"), minBarHeight ));
+            ", Person.Id.ToString(), monthsToDisplay , minBarHeight, badge.Id ));
 
         }
 

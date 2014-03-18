@@ -372,7 +372,6 @@ namespace Rock.Model
         public Person() : base()
         {
             _users = new Collection<UserLogin>();
-            _emailTemplates = new Collection<EmailTemplate>();
             _phoneNumbers = new Collection<PhoneNumber>();
             _members = new Collection<GroupMember>();
             _attendances = new Collection<Attendance>();
@@ -518,20 +517,6 @@ namespace Rock.Model
         private ICollection<UserLogin> _users;
 
         /// <summary>
-        /// Gets or sets a collection containing the <see cref="Rock.Model.EmailTemplate">EmailTemplates</see> that were created by this Person.
-        /// </summary>
-        /// <value>
-        /// A collection containing the <see cref="Rock.Model.EmailTemplate">EmailTemplates</see> that were created by this Person.
-        /// </value>
-        [DataMember]
-        public virtual ICollection<EmailTemplate> EmailTemplates
-        {
-            get { return _emailTemplates; }
-            set { _emailTemplates = value; }
-        }
-        private ICollection<EmailTemplate> _emailTemplates;
-
-        /// <summary>
         /// Gets or sets a collection of <see cref="Rock.Model.PhoneNumber">PhoneNumbers</see> 
         /// </summary>
         /// <value>
@@ -553,7 +538,6 @@ namespace Rock.Model
         /// <value>
         /// A collection of <see cref="Rock.Model.GroupMember">GroupMember</see> entities representing the group memberships that are associated with
         /// </value>
-        [DataMember]
         [MergeField]
         public virtual ICollection<GroupMember> Members
         {
@@ -568,7 +552,6 @@ namespace Rock.Model
         /// <value>
         /// A collection of <see cref="Rock.Model.Attendance"/> entities representing the Person's attendance history.
         /// </value>
-        [DataMember]
         [MergeField]
         public virtual ICollection<Attendance> Attendances
         {
@@ -583,8 +566,6 @@ namespace Rock.Model
         /// <value>
         /// The aliases.
         /// </value>
-        [DataMember]
-        [MergeField]
         public virtual ICollection<PersonAlias> Aliases
         {
             get { return _aliases; }
@@ -762,21 +743,33 @@ namespace Rock.Model
         {
             get
             {
-                if ( BirthDay == null || BirthMonth == null )
+                if ( BirthDay.HasValue && BirthMonth.HasValue )
                 {
-                    return int.MaxValue;
-                }
-                else
-                {
-                    var today = RockDateTime.Today;
-                    var birthdate = Convert.ToDateTime( BirthMonth.ToString() + "/" + BirthDay.ToString() + "/" + today.Year.ToString() );
-                    if ( birthdate.CompareTo( today ) < 0 )
+                    if ( BirthDay.Value >= 1 && BirthDay.Value <= 31 && BirthMonth.Value >= 1 && BirthMonth.Value <= 12 )
                     {
-                        birthdate = birthdate.AddYears( 1 );
-                    }
+                        var today = RockDateTime.Today;
 
-                    return Convert.ToInt32( birthdate.Subtract( today ).TotalDays );
+                        int day = BirthDay.Value;
+                        int month = BirthMonth.Value;
+                        int year = today.Year;
+                        if ( month < today.Month || ( month == today.Month && day < today.Day ) )
+                        {
+                            year++;
+                        }
+
+                        DateTime bday = DateTime.MinValue;
+                        while ( !DateTime.TryParse( BirthMonth.Value.ToString() + "/" + day.ToString() + "/" + year.ToString(), out bday ) && day > 28 )
+                        {
+                            day--;
+                        }
+
+                        if ( bday != DateTime.MinValue )
+                        {
+                            return Convert.ToInt32( bday.Subtract( today ).TotalDays );
+                        }
+                    }
                 }
+                return int.MaxValue;
             }
         }
 
@@ -864,6 +857,45 @@ namespace Rock.Model
         }
 
         /// <summary>
+        /// Gets the grade string.
+        /// </summary>
+        /// <value>
+        /// The grade string.
+        /// </value>
+        [NotMapped]
+        [DataMember]
+        [MergeField]
+        public virtual string GradeFormatted
+        {
+            get 
+            {
+                int? grade = Grade;
+                if ( grade.HasValue )
+                {
+                    switch ( grade.Value )
+                    {
+                        case 0: { return "Kindergarten"; }
+                        case 1: { return "1st Grade"; }
+                        case 2: { return "2nd Grade"; }
+                        case 3: { return "3rd Grade"; }
+                        case 4: 
+                        case 5: 
+                        case 6: 
+                        case 7: 
+                        case 8: 
+                        case 9: 
+                        case 10:
+                        case 11:
+                        case 12: { return string.Format("{0}th Grade", grade.Value); }
+                        default: { return string.Empty; }
+                    }
+                }
+
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
         /// Gets the impersonation parameter.
         /// </summary>
         /// <value>
@@ -931,12 +963,25 @@ namespace Rock.Model
         /// </summary>
         /// <param name="photoId">The photo identifier.</param>
         /// <param name="gender">The gender.</param>
+        /// <param name="maxWidth">The maximum width.</param>
+        /// <param name="maxHeight">The maximum height.</param>
         /// <returns></returns>
-        public static string GetPhotoUrl(int? photoId, Gender gender)
+        public static string GetPhotoUrl(int? photoId, Gender gender, int? maxWidth = null, int? maxHeight = null)
         {
             if ( photoId.HasValue )
             {
-                return VirtualPathUtility.ToAbsolute( String.Format( "~/GetImage.ashx?id={0}", photoId ) );
+                string widthHeightParams = string.Empty;
+                if ( maxWidth.HasValue )
+                {
+                    widthHeightParams += string.Format( "&maxwidth={0}", maxWidth.Value );
+                }
+                
+                if ( maxHeight.HasValue )
+                {
+                    widthHeightParams += string.Format( "&maxheight={0}", maxHeight.Value );
+                }
+                
+                return VirtualPathUtility.ToAbsolute( String.Format( "~/GetImage.ashx?id={0}" + widthHeightParams, photoId ) );
             }
             else
             {

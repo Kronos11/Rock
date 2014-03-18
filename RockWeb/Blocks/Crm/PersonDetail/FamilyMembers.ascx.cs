@@ -27,6 +27,7 @@ using System.Web.UI.HtmlControls;
 using Rock;
 using Rock.Attribute;
 using Rock.Model;
+using Rock.Web.Cache;
 
 namespace RockWeb.Blocks.Crm.PersonDetail
 {
@@ -55,7 +56,6 @@ namespace RockWeb.Blocks.Crm.PersonDetail
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
-
             //if (!Page.IsPostBack)
             //{
                 BindFamilies();
@@ -82,8 +82,10 @@ namespace RockWeb.Blocks.Crm.PersonDetail
                     Repeater rptrMembers = e.Item.FindControl( "rptrMembers" ) as Repeater;
                     if (rptrMembers != null)
                     {
-                        var members = group.Members
-                            .Where( m => m.PersonId != Person.Id )
+                        var members = new GroupMemberService().Queryable("GroupRole,Person")
+                            .Where( m => 
+                                m.GroupId == group.Id &&
+                                m.PersonId != Person.Id )
                             .OrderBy( m => m.GroupRole.Order )
                             .ToList();
 
@@ -115,7 +117,10 @@ namespace RockWeb.Blocks.Crm.PersonDetail
                     {
                         rptrAddresses.ItemDataBound += rptrAddresses_ItemDataBound;
                         rptrAddresses.ItemCommand += rptrAddresses_ItemCommand;
-                        rptrAddresses.DataSource = group.GroupLocations.OrderBy( l => l.GroupLocationTypeValue.Order).ToList();
+                        rptrAddresses.DataSource = new GroupLocationService().Queryable("Location,GroupLocationTypeValue")
+                            .Where( l => l.GroupId == group.Id)
+                            .OrderBy( l => l.GroupLocationTypeValue.Order)
+                            .ToList();
                         rptrAddresses.DataBind();
                     }
                 }
@@ -131,17 +136,14 @@ namespace RockWeb.Blocks.Crm.PersonDetail
                 {
                     Person fm = groupMember.Person;
 
-                    System.Web.UI.WebControls.Image imgPerson = e.Item.FindControl( "imgPerson" ) as System.Web.UI.WebControls.Image;
-                    if ( imgPerson != null )
+                    // very similar code in EditFamily.ascx.cs
+                    HtmlControl divPersonImage = e.Item.FindControl( "divPersonImage" ) as HtmlControl;
+                    if ( divPersonImage != null )
                     {
-                        imgPerson.ImageUrl = fm.PhotoUrl;
+                        divPersonImage.Style.Add( "background-image", @String.Format( @"url({0})", Person.GetPhotoUrl( fm.PhotoId, fm.Gender ) + "&width=65" ) );
+                        divPersonImage.Style.Add("background-size",  "cover");
+                        divPersonImage.Style.Add("background-position", "50%");
                     }
-                    
-                    if (fm.PhotoUrl.Contains("no-photo"))
-                    {
-                        imgPerson.CssClass = "no-photo";
-                    }
-
                 }
             }
         }
@@ -161,53 +163,29 @@ namespace RockWeb.Blocks.Crm.PersonDetail
                         aMap.HRef = loc.GoogleMapLink( Person.FullName );
                     }
 
-                    LinkButton lbGeocode = e.Item.FindControl( "lbGeocode" ) as LinkButton;
-                    if ( lbGeocode != null )
+                    LinkButton lbVerify = e.Item.FindControl( "lbVerify" ) as LinkButton;
+                    if ( lbVerify != null )
                     {
-                        if ( Rock.Address.GeocodeContainer.Instance.Components.Any( c => c.Value.Value.IsActive ) )
+                        if ( Rock.Address.VerificationContainer.Instance.Components.Any( c => c.Value.Value.IsActive ) )
                         {
-                            lbGeocode.Visible = true;
-                            lbGeocode.CommandName = "geocode";
-                            lbGeocode.CommandArgument = loc.Id.ToString();
+                            lbVerify.Visible = true;
+                            lbVerify.CommandName = "verify";
+                            lbVerify.CommandArgument = loc.Id.ToString();
 
                             if ( loc.GeoPoint != null )
                             {
-                                lbGeocode.ToolTip = string.Format( "{0} {1}",
+                                lbVerify.ToolTip = string.Format( "{0} {1}",
                                     loc.GeoPoint.Latitude,
                                     loc.GeoPoint.Longitude );
                             }
                             else
                             {
-                                lbGeocode.ToolTip = "Geocode Address";
+                                lbVerify.ToolTip = "Verify Address";
                             }
                         }
                         else
                         {
-                            lbGeocode.Visible = false;
-                        }
-                    }
-
-                    LinkButton lbStandardize = e.Item.FindControl( "lbStandardize" ) as LinkButton;
-                    if ( lbStandardize != null )
-                    {
-                        if ( Rock.Address.StandardizeContainer.Instance.Components.Any( c => c.Value.Value.IsActive ) )
-                        {
-                            lbStandardize.Visible = true;
-                            lbStandardize.CommandName = "standardize";
-                            lbStandardize.CommandArgument = loc.Id.ToString();
-
-                            if ( loc.StandardizedDateTime.HasValue )
-                            {
-                                lbStandardize.ToolTip = "Address Standardized";
-                            }
-                            else
-                            {
-                                lbStandardize.ToolTip = "Standardize Address";
-                            }
-                        }
-                        else
-                        {
-                            lbStandardize.Visible = false;
+                            lbVerify.Visible = false;
                         }
                     }
 
@@ -233,12 +211,8 @@ namespace RockWeb.Blocks.Crm.PersonDetail
 
                 switch ( e.CommandName )
                 {
-                    case "geocode":
-                        service.Geocode( location, CurrentPersonAlias );
-                        break;
-
-                    case "standardize":
-                        service.Standardize( location, CurrentPersonAlias );
+                    case "verify":
+                        service.Verify( location, CurrentPersonAlias, true );
                         break;
                 }
 
@@ -259,7 +233,7 @@ namespace RockWeb.Blocks.Crm.PersonDetail
                 Guid familyGroupGuid = new Guid( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY );
 
                 var memberService = new GroupMemberService();
-                var families = memberService.Queryable( "Group.GroupLocations.GroupLocationTypeValue" )
+                var families = memberService.Queryable()
                     .Where( m =>
                         m.PersonId == Person.Id &&
                         m.Group.GroupType.Guid == familyGroupGuid
@@ -269,16 +243,16 @@ namespace RockWeb.Blocks.Crm.PersonDetail
 
                 if ( !families.Any() )
                 {
-                    var role = new GroupTypeRoleService().Get( new Guid( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT ) );
-                    if ( role != null && role.GroupTypeId.HasValue )
+                    var familyGroupType = GroupTypeCache.GetFamilyGroupType();
+                    if ( familyGroupType != null )
                     {
                         var groupMember = new GroupMember();
                         groupMember.PersonId = Person.Id;
-                        groupMember.GroupRoleId = role.Id;
+                        groupMember.GroupRoleId = familyGroupType.DefaultGroupRoleId.Value;
 
                         var family = new Group();
                         family.Name = Person.LastName;
-                        family.GroupTypeId = role.GroupTypeId.Value;
+                        family.GroupTypeId = familyGroupType.Id;
                         family.Members.Add( groupMember );
 
                         var groupService = new GroupService();

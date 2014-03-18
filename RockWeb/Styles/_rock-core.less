@@ -13,6 +13,7 @@
 // 1. Imports
 //--------------------------------
 @import "./FontAwesome/variables.less";
+@import "./JCrop/jcrop.less";
 
 @import "_components.less";
 @import "_page-admin.less";
@@ -189,6 +190,12 @@ small
 
     .panel-body {
         background-color: @body-bg;
+
+        .form-group {
+            .form-control-static {
+                padding-top: 0;
+            }
+        }
     }
 }
 
@@ -250,6 +257,31 @@ small
     margin-top: -10px;
 }
 
+.carousel-control .fa-chevron-left {
+    left: 40px;
+}
+
+.carousel-control .fa-chevron-right {
+    right: 40px;
+}
+
+// form extensions
+
+.form-no-margin {
+    margin: 0;
+}
+
+// list extensions
+
+ul.list-padded {
+    li {
+        margin-top: 12px;
+
+        &:first-child {
+            margin-top: 0;
+        }
+    }
+}
 
 // 4. ASP.Net Overrides
 //--------------------------------

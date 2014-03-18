@@ -23,6 +23,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using System.IO;
+using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.Web.UI.HtmlControls;
 
@@ -43,10 +44,17 @@ namespace RockWeb.Blocks.Core
     [Description( "Handles checking for and performing upgrades to the Rock system." )]
     public partial class RockUpdate : Rock.Web.UI.RockBlock
     {
+
+        #region Fields
+
         WebProjectManager nuGetService = null;
         private string _rockPackageId = "Rock";
         IEnumerable<IPackage> _availablePackages = null;
-        SemanticVersion _installedVersion = new SemanticVersion("0.0.0");
+        SemanticVersion _installedVersion = new SemanticVersion( "0.0.0" );
+
+        #endregion
+
+        #region Properties
 
         /// <summary>
         /// Obtains a WebProjectManager from the Global "UpdateServerUrl" Attribute.
@@ -66,27 +74,35 @@ namespace RockWeb.Blocks.Core
             }
         }
 
-        #region Event Handlers
+        #endregion
 
+        #region Base Control Methods
         /// <summary>
         /// Invoked on page load.
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void Page_Load( object sender, EventArgs e )
+        /// <param name="e">An <see cref="T:System.EventArgs" /> object that contains the event data.</param>
+        protected override void OnLoad( EventArgs e )
         {
+            // Set timeout for up to 15 minutes (just like installer)
+            Server.ScriptTimeout = 900;
+            ScriptManager.GetCurrent( Page ).AsyncPostBackTimeout = 900;
+
             DisplayRockVersion();
             if ( !IsPostBack )
             {
                 _availablePackages = NuGetService.SourceRepository.FindPackagesById( _rockPackageId ).OrderByDescending( p => p.Version );
                 if ( IsUpdateAvailable() )
                 {
-                    divPackage.Visible = true;
+                    pnlUpdatesAvailable.Visible = true;
+                    pnlNoUpdates.Visible = false;
                     cbIncludeStats.Visible = true;
                     BindGrid();
                 }
             }
         }
+        #endregion
+
+        #region Events
 
         /// <summary>
         /// Bind the available packages to the repeater.
@@ -108,17 +124,17 @@ namespace RockWeb.Blocks.Core
             {
                 if ( ! UpdateRockPackage( version ) )
                 {
-                    nbErrors.Visible = true;
-                    nbSuccess.Visible = false;
+                    pnlError.Visible = true;
+                    pnlUpdateSuccess.Visible = false;
                 }
 
-                divPackage.Visible = false;
-                litRockVersion.Text = "";
+                pnlUpdatesAvailable.Visible = false;
+                lRockVersion.Text = "";
             }
             catch ( Exception ex )
             {
-                nbErrors.Visible = true;
-                nbSuccess.Visible = false;
+                pnlError.Visible = true;
+                pnlUpdateSuccess.Visible = false;
                 nbErrors.Text = string.Format( "Something went wrong.  Although the errors were written to the error log, they are listed for your review:<br/>{0}", ex.Message );
                 LogException( ex );
             }
@@ -160,6 +176,7 @@ namespace RockWeb.Blocks.Core
 
         #endregion
 
+        #region Methods
         /// <summary>
         /// Updates an existing Rock package to the given version and returns true if successful.
         /// </summary>
@@ -173,8 +190,6 @@ namespace RockWeb.Blocks.Core
                 var update = NuGetService.SourceRepository.FindPackage( _rockPackageId, ( version != null ) ? SemanticVersion.Parse( version ) : null, false, false );
                 var installed = NuGetService.GetInstalledPackage( _rockPackageId );
                 
-                // Set timeout for up to 15 minutes (just like installer)
-                Server.ScriptTimeout = 900;
                 if ( installed == null )
                 {
                     errors = NuGetService.InstallPackage( update );
@@ -183,8 +198,7 @@ namespace RockWeb.Blocks.Core
                 {
                     errors = NuGetService.UpdatePackage( update );
                 }
-                nbSuccess.Text = System.Web.HttpUtility.HtmlEncode( update.ReleaseNotes ).ConvertCrLfToHtmlBr();
-                nbSuccess.Text += "<p><b>NOTE:</b> Any database changes will take effect at the next page load.</p>";
+                nbSuccess.Text = ConvertToHtmlLiWrappedUl( update.ReleaseNotes).ConvertCrLfToHtmlBr();
 
                 // register any new REST controllers
                 try
@@ -194,22 +208,24 @@ namespace RockWeb.Blocks.Core
                 catch (Exception ex)
                 {
                     errors = errors.Concat( new[] { string.Format( "The update was installed but there was a problem registering any new REST controllers. ({0})", ex.Message ) } );
+                    LogException( ex );
                 }
             }
             catch ( InvalidOperationException ex )
             {
                 errors = errors.Concat( new[] { string.Format( "There is a problem installing v{0}: {1}", version, ex.Message ) } );
+                LogException( ex );
             }
 
             if ( errors != null && errors.Count() > 0 )
             {
-                nbErrors.Visible = true;
-                nbErrors.Text = errors.Aggregate( new StringBuilder( "<ul>" ), ( sb, s ) => sb.AppendFormat( "<li>{0}</li>", s ) ).Append( "</ul>" ).ToString();
+                pnlError.Visible = true;
+                nbErrors.Text = errors.Aggregate( new StringBuilder( "<ul class='list-padded'>" ), ( sb, s ) => sb.AppendFormat( "<li>{0}</li>", s ) ).Append( "</ul>" ).ToString();
                 return false;
             }
             else
             {
-                nbSuccess.Visible = true;
+                pnlUpdateSuccess.Visible = true;
                 rptPackageVersions.Visible = false;
                 return true;
             }
@@ -220,7 +236,9 @@ namespace RockWeb.Blocks.Core
         /// </summary>
         protected void DisplayRockVersion()
         {
-            litRockVersion.Text = string.Format( "<b>Current Version: </b> {0}", VersionInfo.GetRockProductVersionFullName() );
+            lRockVersion.Text = string.Format( "<b>Current Version: </b> {0}", VersionInfo.GetRockProductVersionFullName() );
+            lNoUpdateVersion.Text = VersionInfo.GetRockProductVersionFullName();
+            lSuccessVersion.Text = VersionInfo.GetRockProductVersionFullName();
         }
         
         /// <summary>
@@ -269,7 +287,9 @@ namespace RockWeb.Blocks.Core
             }
             catch ( InvalidOperationException ex )
             {
-                litMessage.Text = string.Format( "<div class='alert alert-danger'>There is a problem with the packaging system. {0}</p>", ex.Message );
+                pnlNoUpdates.Visible = false;
+                pnlError.Visible = true;
+                lMessage.Text = string.Format( "<div class='alert alert-danger'>There is a problem with the packaging system. {0}</p>", ex.Message );
             }
 
             if (verifiedPackages.Count > 0 )
@@ -359,5 +379,46 @@ namespace RockWeb.Blocks.Core
 </html>
 " );
         }
-}
+
+        /// <summary>
+        /// Converts + and * to html line items (li) wrapped in unordered lists (ul).
+        /// </summary>
+        /// <param name="str">a string that contains lines that start with + or *</param>
+        /// <returns>an html string of <code>li</code> wrapped in <code>ul</code></returns>
+        public string ConvertToHtmlLiWrappedUl( string str )
+        {
+            if ( str == null )
+            {
+                return string.Empty;
+            }
+
+            bool foundMatch = false;
+
+            // Lines that start with  "+ *" or "+" or "*"
+            var re = new System.Text.RegularExpressions.Regex( @"^\s*(\+ \* |[\+\*]+)(.*)" );
+            var htmlBuilder = new StringBuilder();
+
+            // split the string on newlines...
+            string[] splits = str.Split( new[] { Environment.NewLine, "\x0A" }, StringSplitOptions.RemoveEmptyEntries );
+            // look at each line to see if it starts with a + or * and then strip it and wrap it in <li></li>
+            for ( int i = 0; i < splits.Length; i++ )
+            {
+                var match = re.Match( splits[i] );
+                if ( match.Success )
+                {
+                    foundMatch = true;
+                    htmlBuilder.AppendFormat( "<li>{0}</li>", match.Groups[2] );
+                }
+                else
+                {
+                    htmlBuilder.Append( splits[i] );
+                }
+            }
+
+            // if we had a match then wrap it in <ul></ul> markup
+            return foundMatch ? string.Format( "<ul class='list-padded'>{0}</ul>", htmlBuilder.ToString() ) : htmlBuilder.ToString();
+        }
+        #endregion
+
+    }
 }

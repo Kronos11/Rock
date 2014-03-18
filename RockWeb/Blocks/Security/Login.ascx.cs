@@ -137,9 +137,7 @@ Sorry, your account has been locked.  Please contact our office at {{ GlobalAttr
                 if ( userLogin != null && userLogin.EntityType != null)
                 {
                     var component = AuthenticationContainer.GetComponent(userLogin.EntityType.Name);
-                    if (component.IsActive && 
-                        component.ServiceType == AuthenticationServiceType.Internal &&
-                        !component.RequiresRemoteAuthentication)
+                    if (component.IsActive && !component.RequiresRemoteAuthentication)
                     {
                         if ( component.Authenticate( userLogin, tbPassword.Text ) )
                         {
@@ -188,7 +186,7 @@ Sorry, your account has been locked.  Please contact our office at {{ GlobalAttr
                 helpUrl = ResolveRockUrl("~/ForgotUserName");
             }
                 
-            DisplayError( String.Format("Sorry, we couldn't find an account matching that username/password. Can we help you <a href='{0}'>recover your accout information</a>?", helpUrl) );
+            DisplayError( String.Format("Sorry, we couldn't find an account matching that username/password. Can we help you <a href='{0}'>recover your account information</a>?", helpUrl) );
         }
 
         /// <summary>
@@ -328,7 +326,7 @@ Sorry, your account has been locked.  Please contact our office at {{ GlobalAttr
             var recipients = new Dictionary<string, Dictionary<string, object>>();
             recipients.Add( userLogin.Person.Email, mergeObjects );
 
-            Email.Send( GetAttributeValue( "ConfirmAccountTemplate" ).AsGuid(), recipients );
+            Email.Send( GetAttributeValue( "ConfirmAccountTemplate" ).AsGuid(), recipients, ResolveRockUrl( "~/" ), ResolveRockUrl( "~~/" ) );
         }
 
         #endregion

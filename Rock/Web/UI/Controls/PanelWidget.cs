@@ -266,7 +266,11 @@ $('.js-stop-immediate-propagation').click(function (event) {
                 writer.AddAttribute( HtmlTextWriterAttribute.Class, "filter-item-description js-header-title" );
                 if ( Expanded )
                 {
-                    writer.AddStyleAttribute( HtmlTextWriterStyle.Display, "none" );
+                    // if the panel is expanded and there are special HeaderControls to show instead of the Title, hide the title (and the header controls will be shown instead)
+                    if ( this.HeaderControls != null )
+                    {
+                        writer.AddStyleAttribute( HtmlTextWriterStyle.Display, "none" );
+                    }
                 }
 
                 writer.RenderBeginTag( HtmlTextWriterTag.Div );
@@ -315,7 +319,7 @@ $('.js-stop-immediate-propagation').click(function (event) {
                 if ( ShowReorderIcon )
                 {
                     // Reorder Icon
-                    writer.AddAttribute( HtmlTextWriterAttribute.Class, "btn btn-xs panel-widget-reorder js-stop-immediate-propagation" );
+                    writer.AddAttribute( HtmlTextWriterAttribute.Class, "btn btn-link btn-xs panel-widget-reorder js-stop-immediate-propagation" );
                     writer.RenderBeginTag( HtmlTextWriterTag.A );
                     writer.AddAttribute( HtmlTextWriterAttribute.Class, "fa fa-bars" );
                     writer.RenderBeginTag( HtmlTextWriterTag.I );
@@ -324,7 +328,7 @@ $('.js-stop-immediate-propagation').click(function (event) {
                 }
 
                 // Chevron up/down Button
-                writer.AddAttribute( HtmlTextWriterAttribute.Class, "btn btn-xs view-state" );
+                writer.AddAttribute( HtmlTextWriterAttribute.Class, "btn btn-link btn-xs view-state" );
                 writer.RenderBeginTag( HtmlTextWriterTag.A );
                 writer.AddAttribute( HtmlTextWriterAttribute.Class, Expanded ? "fa fa-chevron-up" : "fa fa-chevron-down" );
                 writer.RenderBeginTag( HtmlTextWriterTag.I );

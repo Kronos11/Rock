@@ -52,7 +52,7 @@
 	<summary>
 		<codepage>1252</codepage>
 		<title>Installation Database</title>
-		<subject>RockChMS Statement Generator</subject>
+		<subject>RockRMS Statement Generator</subject>
 		<author>##ID_STRING2##</author>
 		<keywords>Installer,MSI,Database</keywords>
 		<comments>Contact:  Your local administrator</comments>
@@ -340,6 +340,7 @@
 		<col def="S0">ISDotNetInstallerArgsCommit</col>
 		<col def="S0">ISDotNetInstallerArgsUninstall</col>
 		<col def="S0">ISDotNetInstallerArgsRollback</col>
+		<row><td>ISX_DEFAULTCOMPONENT</td><td>{DFFFDBC3-44A9-444B-B3D2-6CBDB9D648FE}</td><td>INSTALLDIR</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>StatementGenerator.Primary_output</td><td>{5E81DD6B-0B02-459D-A2FC-C246A414CFF7}</td><td>INSTALLDIR</td><td>2</td><td/><td>statementgenerator.primary_o</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 	</table>
 
@@ -1138,7 +1139,7 @@
 		<row><td>FavoritesFolder</td><td>TARGETDIR</td><td>.:FAVORI~1|Favorites</td><td/><td>0</td><td/></row>
 		<row><td>FontsFolder</td><td>TARGETDIR</td><td>.:Fonts</td><td/><td>0</td><td/></row>
 		<row><td>GlobalAssemblyCache</td><td>TARGETDIR</td><td>.:Global~1|GlobalAssemblyCache</td><td/><td>0</td><td/></row>
-		<row><td>INSTALLDIR</td><td>ROCKCHMS_STATEMENT_GENERATOR</td><td>.</td><td/><td>0</td><td/></row>
+		<row><td>INSTALLDIR</td><td>ROCKRMS_STATEMENT_GENERATOR</td><td>.</td><td/><td>0</td><td/></row>
 		<row><td>ISCommonFilesFolder</td><td>CommonFilesFolder</td><td>Instal~1|InstallShield</td><td/><td>0</td><td/></row>
 		<row><td>ISMyCompanyDir</td><td>ProgramFilesFolder</td><td>MYCOMP~1|My Company Name</td><td/><td>0</td><td/></row>
 		<row><td>ISMyProductDir</td><td>ISMyCompanyDir</td><td>MYPROD~1|My Product Name</td><td/><td>0</td><td/></row>
@@ -1154,6 +1155,7 @@
 		<row><td>ProgramFilesFolder</td><td>TARGETDIR</td><td>.:PROGRA~1|program files</td><td/><td>0</td><td/></row>
 		<row><td>ProgramMenuFolder</td><td>TARGETDIR</td><td>.:Programs</td><td/><td>3</td><td/></row>
 		<row><td>ROCKCHMS_STATEMENT_GENERATOR</td><td>SPARK_DEVELOPMENT_NETWORK</td><td>ROCKCH~1|RockChMS Statement Generator</td><td/><td>0</td><td/></row>
+		<row><td>ROCKRMS_STATEMENT_GENERATOR</td><td>SPARK_DEVELOPMENT_NETWORK</td><td>ROCKRM~1|RockRMS Statement Generator</td><td/><td>0</td><td/></row>
 		<row><td>RecentFolder</td><td>TARGETDIR</td><td>.:Recent</td><td/><td>0</td><td/></row>
 		<row><td>SPARK_DEVELOPMENT_NETWORK</td><td>ProgramFilesFolder</td><td>SPARKD~1|Spark Development Network</td><td/><td>0</td><td/></row>
 		<row><td>SendToFolder</td><td>TARGETDIR</td><td>.:SendTo</td><td/><td>3</td><td/></row>
@@ -1861,6 +1863,7 @@
 	<table name="FeatureComponents">
 		<col key="yes" def="s38">Feature_</col>
 		<col key="yes" def="s72">Component_</col>
+		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT</td></row>
 		<row><td>AlwaysInstall</td><td>StatementGenerator.Primary_output</td></row>
 	</table>
 
@@ -1876,6 +1879,8 @@
 		<col def="S255">ISBuildSourcePath</col>
 		<col def="I4">ISAttributes</col>
 		<col def="S72">ISComponentSubFolder_</col>
+		<row><td>logo.jpg</td><td>ISX_DEFAULTCOMPONENT</td><td>logo.jpg</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Projects\Rock\Applications\Wpf\StatementGenerator\logo.jpg</td><td>1</td><td/></row>
+		<row><td>rock_standard.dplx</td><td>ISX_DEFAULTCOMPONENT</td><td>ROCK-S~1.DPL|rock-standard.dplx</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Projects\Rock\Applications\Wpf\StatementGenerator\rock-standard.dplx</td><td>1</td><td/></row>
 		<row><td>statementgenerator.primary_o</td><td>StatementGenerator.Primary_output</td><td>StatementGenerator.Primary output</td><td>0</td><td/><td/><td/><td>1</td><td>&lt;StatementGenerator&gt;|Built</td><td>3</td><td/></row>
 	</table>
 
@@ -2020,6 +2025,7 @@
 		<col def="S0">FTPLocation</col>
 		<col def="S0">HTTPLocation</col>
 		<col def="S0">Miscellaneous</col>
+		<row><td>ISX_DEFAULTCOMPONENT</td><td/><td/><td>_F04FB79D_13FA_4333_B011_07B6AE042D35_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>StatementGenerator.Primary_output</td><td/><td/><td>_FDF88752_9443_46EE_98D4_B0CCA54EFAAC_FILTER</td><td/><td/><td/><td/></row>
 	</table>
 
@@ -2090,6 +2096,13 @@
 	<table name="ISDependency">
 		<col key="yes" def="S50">ISDependency</col>
 		<col def="I2">Exclude</col>
+		<row><td>AJAXCONTROLTOOLKIT.DLL</td><td>1</td></row>
+		<row><td>AJAXMIN.DLL</td><td>1</td></row>
+		<row><td>DDAY.ICAL.DLL</td><td>1</td></row>
+		<row><td>IMAGERESIZER.DLL</td><td>1</td></row>
+		<row><td>MICROSOFT.WINDOWSAZURE.STORAGE</td><td>1</td></row>
+		<row><td>RESTSHARP</td><td>1</td></row>
+		<row><td>TWILIO.API.DLL</td><td>1</td></row>
 	</table>
 
 	<table name="ISDisk1File">
@@ -3451,7 +3464,7 @@
 		<row><td>IDS_PROGMSG_XML_UPDATE_FILE</td><td>1033</td><td>Updating XML file %s...</td><td>0</td><td/><td>-1650375318</td></row>
 		<row><td>IDS_SETUPEXE_EXPIRE_MSG</td><td>1033</td><td>This setup works until %s. The setup will now exit.</td><td>0</td><td/><td>-1650375318</td></row>
 		<row><td>IDS_SETUPEXE_LAUNCH_COND_E</td><td>1033</td><td>This setup was built with an evaluation version of InstallShield and can only be launched from setup.exe.</td><td>0</td><td/><td>-1650375318</td></row>
-		<row><td>IDS_SHORTCUT_DISPLAY_NAME1</td><td>1033</td><td>RockChMS Statement Generator</td><td>0</td><td/><td>-1650387350</td></row>
+		<row><td>IDS_SHORTCUT_DISPLAY_NAME1</td><td>1033</td><td>RockRMS Statement Generator</td><td>0</td><td/><td>966972106</td></row>
 		<row><td>IDS_SQLBROWSE_INTRO</td><td>1033</td><td>From the list of servers below, select the database server you would like to target.</td><td>0</td><td/><td>-1650375318</td></row>
 		<row><td>IDS_SQLBROWSE_INTRO_DB</td><td>1033</td><td>From the list of catalog names below, select the database catalog you would like to target.</td><td>0</td><td/><td>-1650375318</td></row>
 		<row><td>IDS_SQLBROWSE_INTRO_TEMPLATE</td><td>1033</td><td>[IS_SQLBROWSE_INTRO]</td><td>0</td><td/><td>-1650375318</td></row>
@@ -3850,7 +3863,7 @@
 		<col def="V0">Data</col>
 		<col def="S255">ISBuildSourcePath</col>
 		<col def="I2">ISIconIndex</col>
-		<row><td>ARPPRODUCTICON.exe</td><td/><td>&lt;ISProductFolder&gt;\redist\Language Independent\OS Independent\setupicon.ico</td><td>0</td></row>
+		<row><td>ARPPRODUCTICON.exe</td><td/><td>C:\Projects\Rock\Applications\Wpf\StatementGenerator\resources\statement-printer.ico</td><td>0</td></row>
 	</table>
 
 	<table name="IniFile">
@@ -3983,7 +3996,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>ISTheme</td><td>InstallShield Blue.theme</td></row>
 		<row><td>ISUSLock</td><td>{75F61807-2681-4DB0-AACA-BCF21C809F3A}</td></row>
 		<row><td>ISUSSignature</td><td>{9447C305-C38F-4044-9598-85064274890A}</td></row>
-		<row><td>ISVisitedViews</td><td>viewAssistant</td></row>
+		<row><td>ISVisitedViews</td><td>viewAssistant,viewProject,viewAppFiles,viewFeatureFiles,viewObjects</td></row>
 		<row><td>Limited</td><td>1</td></row>
 		<row><td>LockPermissionMode</td><td>1</td></row>
 		<row><td>MsiExecCmdLineOptions</td><td/></row>
@@ -4357,7 +4370,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>PROGMSG_IIS_ROLLBACKVROOTS</td><td>##IDS_PROGMSG_IIS_ROLLBACKVROOTS##</td><td/></row>
 		<row><td>PROGMSG_IIS_ROLLBACKWEBSERVICEEXTENSIONS</td><td>##IDS_PROGMSG_IIS_ROLLBACKWEBSERVICEEXTENSIONS##</td><td/></row>
 		<row><td>ProductCode</td><td>{9F2FA4AA-FE81-455F-A516-5CF5E6870CD9}</td><td/></row>
-		<row><td>ProductName</td><td>RockChMS Statement Generator</td><td/></row>
+		<row><td>ProductName</td><td>RockRMS Statement Generator</td><td/></row>
 		<row><td>ProductVersion</td><td>1.00.0000</td><td/></row>
 		<row><td>ProgressType0</td><td>install</td><td/></row>
 		<row><td>ProgressType1</td><td>Installing</td><td/></row>

@@ -43,7 +43,7 @@ namespace RockWeb.Blocks.Cms
     [TextField("Document Root Folder", "The folder to use as the root when browsing or uploading documents.", false, "~/Content", "", 1 )]
     [TextField( "Image Root Folder", "The folder to use as the root when browsing or uploading images.", false, "~/Content", "", 2 )]
     [BooleanField( "User Specific Folders", "Should the root folders be specific to current user?", false, "", 3 )]
-    [IntegerField( "Cache Duration", "Number of seconds to cache the content.", false, 0, "", 4 )]
+    [IntegerField( "Cache Duration", "Number of seconds to cache the content.", false, 3600, "", 4 )]
     [TextField( "Context Parameter", "Query string parameter to use for 'personalizing' content based on unique values.", false, "", "", 5 )]
     [TextField( "Context Name", "Name to use to further 'personalize' content.  Blocks with the same name, and referenced with the same context parameter will share html values.", false, "", "", 6 )]
     [BooleanField( "Require Approval", "Require that content be approved?", false, "", 7 )]
@@ -152,17 +152,7 @@ namespace RockWeb.Blocks.Cms
 
             string documentRoot = GetAttributeValue("DocumentRootFolder");
             string imageRoot = GetAttributeValue("ImageRootFolder");
-
-            if ( CurrentUser != null )
-            {
-                bool userSpecificFolders = false;
-                if ( bool.TryParse( GetAttributeValue( "UserSpecificFolders" ), out userSpecificFolders ) && userSpecificFolders )
-                {
-                    documentRoot = System.Web.VirtualPathUtility.Combine( documentRoot, CurrentUser.Id.ToString() );
-                    imageRoot = System.Web.VirtualPathUtility.Combine( imageRoot, CurrentUser.Id.ToString() );
-                }
-            }
-
+            htmlEditor.UserSpecificRoot = GetAttributeValue( "UserSpecificFolders" ).AsBoolean();
             htmlEditor.DocumentFolderRoot = documentRoot;
             htmlEditor.ImageFolderRoot = imageRoot;
 
@@ -277,9 +267,17 @@ namespace RockWeb.Blocks.Cms
             htmlContent.ExpireDateTime = drpDateRange.UpperValue;
             bool currentUserCanApprove = IsUserAuthorized( "Approve" );
 
-            if ( !requireApproval || currentUserCanApprove )
+            if ( !requireApproval )
             {
-                htmlContent.IsApproved = ( !requireApproval || hfApprovalStatus.Value.AsBoolean() ) || currentUserCanApprove;
+                // if this block doesn't require Approval, mark it as approved
+                htmlContent.IsApproved = true;
+                htmlContent.ApprovedByPersonId = this.CurrentPersonId;
+                htmlContent.ApprovedDateTime = RockDateTime.Now;
+            }
+            else
+            {
+                // if this block requires Approval, mark it as approved if the ApprovalStatus is still approved, or if the current user can approve
+                htmlContent.IsApproved = ( hfApprovalStatus.Value.AsBoolean() ) || currentUserCanApprove;
                 if ( htmlContent.IsApproved )
                 {
                     int? personId = hfApprovalStatusPersonId.Value.AsInteger( false );
@@ -401,7 +399,7 @@ namespace RockWeb.Blocks.Cms
         private void BindGrid()
         {
             var htmlContentService = new HtmlContentService();
-            var content = htmlContentService.GetContent( this.BlockId, EntityValue() );
+            var content = htmlContentService.GetContent( this.BlockId, EntityValue() ).OrderByDescending(a => a.Version).ThenByDescending( a => a.ModifiedDateTime );
 
             var versions = content.Select( v =>
                 new

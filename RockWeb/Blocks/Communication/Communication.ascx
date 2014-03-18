@@ -14,6 +14,10 @@
         <asp:HiddenField ID="hfCommunicationId" runat="server" />
         <asp:HiddenField ID="hfChannelId" runat="server" />
 
+        <asp:ValidationSummary ID="ValidationSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+
+        <Rock:RockDropDownList ID="ddlTemplate" runat="server" Label="Template" AutoPostBack="true" OnSelectedIndexChanged="ddlTemplate_SelectedIndexChanged" />
+
         <ul class="nav nav-pills nav-pagelist">
             <asp:Repeater ID="rptChannels" runat="server">
                 <ItemTemplate>
@@ -25,8 +29,6 @@
             </asp:Repeater>
         </ul>
         
-        <asp:ValidationSummary ID="ValidationSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
-
         <div class="panel panel-widget recipients">
             <div class="panel-heading clearfix">
                 <div class="control-label pull-left">
@@ -56,7 +58,6 @@
             </div>
         </div>
 
-        
 
         <asp:PlaceHolder ID="phContent" runat="server" />
 

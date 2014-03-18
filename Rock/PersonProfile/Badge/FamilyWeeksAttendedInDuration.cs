@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.Data;
 using System;
 using System.Diagnostics;
+using Rock.Web.Cache;
 
 namespace Rock.PersonProfile.Badge
 {
@@ -47,15 +48,17 @@ namespace Rock.PersonProfile.Badge
         /// </summary>
         /// <param name="badge">The badge.</param>
         /// <param name="writer">The writer.</param>
-        public override void Render( PersonBadge badge, System.Web.UI.HtmlTextWriter writer )
+        public override void Render( PersonBadgeCache badge, System.Web.UI.HtmlTextWriter writer )
         {
-            writer.Write(String.Format("<div class='badge badge-weeksattendanceduration' data-original-title='Family attendance for the last {0} weeks.'>", GetAttributeValue(badge, "Duration")));
+            int duration = GetAttributeValue(badge, "Duration").AsInteger(false) ?? 16;
+            
+            writer.Write(string.Format("<div class='badge badge-weeksattendanceduration badge-id-{0}' data-original-title='Family attendance for the last {1} weeks.'>", badge.Id, duration));
 
             writer.Write("</div>");
 
-            writer.Write(String.Format(@"
+            writer.Write(string.Format( @"
                 <script>
-                    $( document ).ready(function() {{
+                    Sys.Application.add_load(function () {{
                                                 
                         $.ajax({{
                                 type: 'GET',
@@ -67,7 +70,7 @@ namespace Rock.PersonProfile.Badge
                                             badgeHtml += '<span class=\'weeks-attended\'>' + data + '</span><span class=\'week-duration\'>/{0}</span>';                
                                             badgeHtml += '</div>';
                                             
-                                            $('.badge-weeksattendanceduration').html(badgeHtml);
+                                            $('.badge-weeksattendanceduration.badge-id-{2}').html(badgeHtml);
 
                                         }}
                                 }},
@@ -75,7 +78,7 @@ namespace Rock.PersonProfile.Badge
                     }});
                 </script>
                 
-            ", GetAttributeValue(badge, "Duration"), Person.Id.ToString() ));
+            ", duration, Person.Id.ToString(), badge.Id));
 
         }
 

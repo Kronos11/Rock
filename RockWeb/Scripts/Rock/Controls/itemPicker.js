@@ -74,19 +74,15 @@
                     self.updateScrollbar();
                 });
 
-                $control.hover(
-                    function () {
-                        if ($hfItemIds.val() && $hfItemIds.val() !== '0') {
-                            $control.find('.picker-select-none').show();
-                        }
-                    },
-                    function () {
-                        $control.find('.rock-picker-select-none').fadeOut(500);
-                    });
-
                 $control.find('.picker-cancel').click(function () {
                     $(this).closest('.picker-menu').slideUp();
                 });
+
+                // have the X appear on hover if something is selected
+                if ($hfItemIds.val() && $hfItemIds.val() !== '0') {
+                    $control.find('.picker-select-none').addClass('rollover-item');
+                    $control.find('.picker-select-none').show();
+                }
 
                 $control.find('.picker-btn').click(function () {
 
@@ -102,6 +98,11 @@
 
                     $hfItemIds.val(selectedIds.join(','));
                     $hfItemNames.val(selectedNames.join(','));
+
+                    // have the X appear on hover. something is selected
+                    $control.find('.picker-select-none').addClass('rollover-item');
+                    $control.find('.picker-select-none').show();
+
                     $spanNames.text(selectedNames.join(', '));
 
                     $(this).closest('.picker-menu').slideUp();
@@ -113,13 +114,18 @@
                     rockTree.clear();
                     $hfItemIds.val('');
                     $hfItemNames.val('');
+
+                    // don't have the X appear on hover. nothing is selected
+                    $control.find('.picker-select-none').removeClass('rollover-item');
+                    $control.find('.picker-select-none').hide();
+
                     $spanNames.text(self.options.defaultText);
                     return false;
                 });
             },
             updateScrollbar: function () {
                 var $container = $('#' + this.options.controlId).find('.scroll-container'),
-                    $dialog = $('#modal-scroll-container'),
+                    $dialog = $('div.rock-modal > div.modal-body > div.scroll-container'),
                     dialogTop,
                     pickerTop,
                     amount;

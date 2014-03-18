@@ -324,6 +324,10 @@
           <Value>hf</Value>
           <Value>i</Value>
           <Value>ph</Value>
+          <Value>a</Value>
+          <Value>md</Value>
+          <Value>nb</Value>
+          <Value>is</Value>
         </CollectionProperty>
       </AnalyzerSettings>
     </Analyzer>

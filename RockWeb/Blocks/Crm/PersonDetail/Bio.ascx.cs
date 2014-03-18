@@ -65,7 +65,7 @@ namespace RockWeb.Blocks.Crm.PersonDetail
                 }
 
                 // Setup Image
-                var imgTag = new LiteralControl( Rock.Model.Person.GetPhotoImageTag( Person.PhotoId, Person.Gender, 188, 188 ) );
+                var imgTag = new LiteralControl( Rock.Model.Person.GetPhotoImageTag( Person.PhotoId, Person.Gender, 200, 200 ) );
                 if ( Person.PhotoId.HasValue )
                 {
                     var imgLink = new HyperLink();
@@ -86,6 +86,19 @@ namespace RockWeb.Blocks.Crm.PersonDetail
                 }
 
                 lGender.Text = Person.Gender.ToString();
+
+                if (Person.GraduationDate.HasValue)
+                {
+                    lGraduation.Text = string.Format( "{0} {1}",
+                        Person.GraduationDate.Value.CompareTo( RockDateTime.Today ) <= 0 ? "Graduated " : "Graduates ",
+                        Person.GraduationDate.Value.Year );
+
+                    string grade = Person.GradeFormatted;
+                    if (grade != string.Empty)
+                    {
+                        lGrade.Text = string.Format( "<small>({0})</small>", grade );
+                    }
+                }
 
                 lMaritalStatus.Text = Person.MaritalStatusValueId.DefinedValue();
                 if ( Person.AnniversaryDate.HasValue )
@@ -108,16 +121,14 @@ namespace RockWeb.Blocks.Crm.PersonDetail
                     string badgeList = GetAttributeValue( "Badges" );
                     if (!string.IsNullOrWhiteSpace(badgeList))
                     {
-                        var personBadgeService = new PersonBadgeService();
                         foreach ( string badgeGuid in badgeList.SplitDelimitedValues() ) 
                         {
                             Guid guid = badgeGuid.AsGuid();
                             if (guid != Guid.Empty)
                             {
-                                var personBadge = personBadgeService.Get( guid );
+                                var personBadge = PersonBadgeCache.Read( guid );
                                 if (personBadge != null)
                                 {
-                                    personBadge.LoadAttributes();
                                     blStatus.PersonBadges.Add( personBadge );
                                 }
                             }

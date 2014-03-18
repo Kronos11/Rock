@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Web;
 using System.Web.Security;
 using Rock.Security;
 using Rock.Web.Cache;
@@ -313,16 +314,41 @@ namespace Rock.Model
 
                     if ( user != null && userIsOnline )
                     {
+                        // Save last activity date
+                        var transaction = new Rock.Transactions.UserLastActivityTransaction();
+                        transaction.UserId = user.Id;
+                        transaction.LastActivityDate = RockDateTime.Now;
+
                         if ( (user.IsConfirmed ?? true) && !(user.IsLockedOut ?? false) )
                         {
-                            // Save last activity date
-                            var transaction = new Rock.Transactions.UserLastActivityTransaction();
-                            transaction.UserId = user.Id;
-                            transaction.LastActivityDate = RockDateTime.Now;
-                            Rock.Transactions.RockQueue.TransactionQueue.Enqueue( transaction );
+
+                            if ( HttpContext.Current.Session["RockUserId"] != null )
+                            {
+                                transaction.SessionUserId = (int)HttpContext.Current.Session["RockUserId"];
+                            }
+
+                            HttpContext.Current.Session["RockUserId"] = user.Id;
+
+
+                            // see if there is already a LastActivitytransaction queued for this user, and just update its LastActivityDate instead of adding another to the queue
+                            var userLastActivity = Rock.Transactions.RockQueue.TransactionQueue.OfType<Rock.Transactions.UserLastActivityTransaction>()
+                                .Where( a => a.UserId == transaction.UserId && a.SessionUserId == transaction.SessionUserId ).FirstOrDefault();
+                            
+                            if (userLastActivity != null)
+                            {
+                                userLastActivity.LastActivityDate = transaction.LastActivityDate;
+                            }
+                            else
+                            {
+                                Rock.Transactions.RockQueue.TransactionQueue.Enqueue( transaction );
+                            }
+                            
                         }
                         else
                         {
+                            transaction.IsOnLine = false;
+                            Rock.Transactions.RockQueue.TransactionQueue.Enqueue( transaction );
+
                             FormsAuthentication.SignOut();
                             return null;
                         }

@@ -11,7 +11,7 @@
         <div class="row">
 
             <div class="col-md-3">
-                <Rock:ImageUploader ID="imgPhoto" runat="server" Label="Photo" BinaryFileTypeGuid="03BD8476-8A9F-4078-B628-5B538F967AFC" />
+                <Rock:ImageEditor ID="imgPhoto" runat="server" Label="Photo" BinaryFileTypeGuid="03BD8476-8A9F-4078-B628-5B538F967AFC" />
 
                 <fieldset>
                     <Rock:RockDropDownList ID="ddlRecordStatus" runat="server" Label="Record Status" AutoPostBack="true" OnSelectedIndexChanged="ddlRecordStatus_SelectedIndexChanged" />
@@ -29,7 +29,18 @@
                     <Rock:DataTextBox ID="tbLastName" runat="server" SourceTypeName="Rock.Model.Person, Rock" PropertyName="LastName" />
                     <Rock:RockDropDownList ID="ddlSuffix" CssClass="input-width-md" runat="server" Label="Suffix"/>
                     <Rock:BirthdayPicker ID="bpBirthDay" runat="server" Label="Birthday" />
-                    <Rock:DatePicker ID="dpAnniversaryDate" runat="server" SourceTypeName="Rock.Model.Person, Rock" PropertyName="AnniversaryDate" />
+
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <Rock:RockDropDownList ID="ddlGrade" runat="server" CssClass="input-width-md" Label="Grade"/>
+                        </div>
+                        <div class="col-sm-3">
+                            <Rock:YearPicker ID="ypGraduation" runat="server" Label="Graduation Year" Help="High School Graduation Year." />
+                        </div>
+                        <div class="col-sm-6">
+                        </div>
+                    </div>
+                    <Rock:DatePicker ID="dpAnniversaryDate" runat="server" SourceTypeName="Rock.Model.Person, Rock" PropertyName="AnniversaryDate" StartView="decade" />
 
                     <Rock:RockRadioButtonList ID="rblGender" runat="server" RepeatDirection="Horizontal" Label="Gender">
                         <asp:ListItem Text="Male" Value="Male" />

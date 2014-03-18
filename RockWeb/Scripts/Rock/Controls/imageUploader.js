@@ -7,6 +7,11 @@
         var _configure = function (options) {
             options.isBinaryFile = options.isBinaryFile || 'T';
 
+            // default setImageUrlOnUpload to true if not specified
+            if (options.setImageUrlOnUpload == null) {
+                options.setImageUrlOnUpload = true;
+            }
+
             var wsUrl = Rock.settings.get('baseUrl')
                         + 'ImageUploader.ashx?'
                         + 'isBinaryFile=' + options.isBinaryFile;
@@ -47,13 +52,24 @@
                     var getImageUrl = Rock.settings.get('baseUrl')
                         + 'GetImage.ashx?'
                         + 'isBinaryFile=' + (options.isBinaryFile || 'T')
-                        // note rootFolder is encrypted to prevent direct access to filesystem via the URL
-                        + '&rootFolder=' + (encodeURIComponent(options.rootFolder) || '')
                         + '&id=' + data.response().result.Id
                         + '&fileName=' + data.response().result.FileName
-                        + '&width=50';
+                        + '&width=150';
 
-                    $el.attr('src', getImageUrl);
+                    if (options.rootFolder) {
+                        // note rootFolder is encrypted to prevent direct access to filesystem via the URL
+                        getImageUrl += '&rootFolder=' + encodeURIComponent(options.rootFolder);
+                    }
+
+                    if (options.setImageUrlOnUpload) {
+                        if ($el.is('img')) {
+                            $el.attr('src', getImageUrl);
+                        }
+                        else {
+                            $el.attr('style', 'background-image:url(' + getImageUrl + ' &width=150);background-size:cover;background-position:50%');
+                        }
+                    }
+
                     $('#' + options.aRemove).show();
                     if (options.postbackScript) {
                         eval(options.postbackScript);
@@ -84,8 +100,13 @@
                 $(this).hide();
                 var $el = $('#' + options.imgThumbnail);
                 $('#' + options.hfFileId).val('0');
-                $el.attr('src', Rock.settings.get('baseUrl') + 'Assets/Images/no-picture.svg');
-                //$('.imageupload-thumbnail img').css('width', "49px"); // hack for chrome 9/30/2013
+                var noPictureUrl = options.noPictureUrl || Rock.settings.get('baseUrl') + 'Assets/Images/no-picture.svg';
+                if ($el.is('img')) {
+                    $el.attr('src', noPictureUrl);
+                }
+                else {
+                    $el.attr('style', 'background-image:url(' + noPictureUrl + ');background-size:cover;background-position:50%');
+                }
                 return false;
             });
         },

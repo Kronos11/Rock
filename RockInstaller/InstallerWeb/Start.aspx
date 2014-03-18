@@ -7,7 +7,7 @@
 
 <script language="CS" runat="server">
 	
-	// you want the Rock ChMS, well here we go! (better hold on...)
+	// you want the Rock RMS, well here we go! (better hold on...)
 	
 	//
 	// The purpose of this page is to download the base files for the install (Ionic.Zip.ddl and Install.aspx) and 
@@ -26,6 +26,7 @@
     const string rockConfigureFile = "http://storage.rockrms.com/install/Configure.aspx";
     const string rockUtilitiesAssembly = "http://storage.rockrms.com/install/Rock.Install.Utilities.dll";
     const string rockInitalWebConfig = "http://storage.rockrms.com/install/web.config";
+    const string rockInstalledFile = @"\bin\Rock.dll";
 
     const string rockLogoIco = "http://storage.rockrms.com/install/rock-chms.ico";
     const string rockStyles = "http://storage.rockrms.com/install/install.css";
@@ -51,7 +52,7 @@
 			// we can't proceed with the install
 			
 			lTitle.Text = "Before We Get Started...";
-			lOutput.Text= "<ul>" + checkMessages + "</ul>";
+            lOutput.Text = "<ul class='list-unstyled'>" + checkMessages + "</ul>";
 			return;
 		}
 		else {
@@ -119,7 +120,7 @@
             }
 					
 			// proceed with the install by downloading the installer files
-			Response.Redirect("Install.aspx");
+            lRedirect.Visible = true;
 		}
 		
 	}
@@ -131,7 +132,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Rock ChMS Installer...</title>
+		<title>Rock RMS Installer...</title>
 		<link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,700' type='text/css'>
         <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css">
         <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
@@ -140,15 +141,17 @@
         <link href="<%=rockLogoIco %>" rel="shortcut icon">
 		<link href="<%=rockLogoIco %>" type="image/ico" rel="icon">
 
+        <script src="http://code.jquery.com/jquery-1.9.0.min.js"></script>
+
 	</head>
 	<body>
 		<form runat="server">
 		
 				<div id="content">
-					<h1>Rock ChMS</h1>
+					<h1>Rock RMS</h1>
 					
 					<div id="content-box" class="group">
-						<h1><asp:Literal ID="lTitle" Text="Server Check" runat="server" /></h1>
+						<h1><asp:Literal ID="lTitle" Text="" runat="server" /></h1>
 						
 						<asp:Label ID="lOutput" runat="server" />
 
@@ -158,9 +161,29 @@
                             <div class="alert alert-warning">
                                 <p><strong>Configuration Alert</strong></p>
 
-                                It appears that this website is not configured to run ASP.Net.  The Rock ChMS
+                                It appears that this website is not configured to run ASP.Net.  The Rock RMS
                                 requires that you run on a Windows Hosting Platform running IIS/ASP.Net.
                             </div>
+
+                        </asp:Literal>
+
+                        <asp:Literal runat="server" ID="lRedirect" Visible="false">    
+                            <div id="divNoJavascript" class="alert alert-danger">
+                                <p>
+                                    <strong>JavaScript Required</strong> To enable a robust installation experience we require JavaScript to be enabled.
+                                </p>
+                                <p><em>If you are running this locally on a server, consider completing the install on a client machine or temporarily 
+                                    enabling JavaScript.
+                                   </em>
+                                </p>
+                            </div>
+
+                            <script>
+                                $( document ).ready(function() {
+                                    $('#content-box').hide();
+                                    window.location = "Install.aspx";
+                                });
+                            </script>
 
                         </asp:Literal>
 
@@ -244,25 +267,23 @@
 
         // check for write permissions
         string filename = Server.MapPath(".") + @"\write-permission.test";
-        
+
         try
         {
-            File.Create(filename).Dispose();
-        }
-        catch (Exception ex)
-        {
+            File.Create( filename ).Dispose();
 
-        }
 
-        if (File.Exists(filename))
-        {
-            canWrite = true;
-            File.Delete(filename);
-        }
+            if ( File.Exists( filename ) )
+            {
+                canWrite = true;
+                File.Delete( filename );
+            }
+            
+        } catch(Exception ex){}
         
         if (!canWrite) {
         	checksFailed = true;
-            errorDetails += "<li><i class='fa fa-exclamation-triangle fail'></i> The username " + userName + " does not have write access to the server's file system. <a class='btn btn-info btn-xs' href='TODO'>Let's Fix It Together</a> </li>";
+            errorDetails += "<li><i class='fa fa-exclamation-triangle fail'></i> The username " + userName + " does not have write access to the server's file system. <a class='btn btn-info btn-xs' href='http://www.rockrms.com/Rock/LetsFixThis#WebServerPermissions'>Let's Fix It Together</a> </li>";
         }
 
         // check asp.net version
@@ -271,9 +292,16 @@
         if (!CheckDotNetVersion(out checkResults))
         {
             checksFailed = true;
-            errorDetails += "<li><i class='fa fa-exclamation-triangle fail'></i>" + checkResults + " <a href='http://www.rockchms.com/installer/help/dotnet-version.html' class='btn btn-info btn-xs'>Let's Fix It Together</a></li>";
+            errorDetails += "<li><i class='fa fa-exclamation-triangle fail'></i> " + checkResults + " <a href='http://www.rockrms.com/Rock/LetsFixThis#IncorrectDotNETVersion' class='btn btn-info btn-xs'>Let's Fix It Together</a></li>";
         }
         
+        // check that rock not already installed
+        string rockFile = Server.MapPath( "." ) + rockInstalledFile;
+        if ( File.Exists( rockFile ) )
+        {
+            checksFailed = true;
+            errorDetails += "<li><i class='fa fa-exclamation-triangle fail'></i> It appears that Rock is already installed in this directory. You must remove this version of Rock before proceeding.</a></li>";
+        }
         
 		return checksFailed;
 	}
@@ -290,7 +318,7 @@
         // sigh... Microsoft... :)
         if (!(Type.GetType("System.Reflection.ReflectionContext", false) != null))
         {
-            errorDetails = "The server does not have the correct .Net runtime.  You have .Net version " + System.Environment.Version.Major.ToString() + "." + System.Environment.Version.ToString() + " the Rock ChMS version requires " + dotNetVersionRequired + ".";
+            errorDetails = "The server does not have the correct .Net runtime.  You have .Net version " + System.Environment.Version.Major.ToString() + "." + System.Environment.Version.ToString() + " the Rock RMS version requires " + dotNetVersionRequired + ".";
         }
         else
         {

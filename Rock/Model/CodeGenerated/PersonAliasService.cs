@@ -120,6 +120,14 @@ namespace Rock.Model
             
             // ignoring CommunicationRecipient,ModifiedByPersonAliasId 
             
+            // ignoring CommunicationTemplate,CreatedByPersonAliasId 
+            
+            // ignoring CommunicationTemplate,ModifiedByPersonAliasId 
+            
+            // ignoring CommunicationTemplate,OwnerPersonAliasId 
+            
+            // ignoring CommunicationTemplate,SenderPersonAliasId 
+            
             // ignoring DataView,CreatedByPersonAliasId 
             
             // ignoring DataView,ModifiedByPersonAliasId 
@@ -139,10 +147,6 @@ namespace Rock.Model
             // ignoring Device,CreatedByPersonAliasId 
             
             // ignoring Device,ModifiedByPersonAliasId 
-            
-            // ignoring EmailTemplate,CreatedByPersonAliasId 
-            
-            // ignoring EmailTemplate,ModifiedByPersonAliasId 
             
             // ignoring ExceptionLog,CreatedByPersonAliasId 
             
@@ -342,6 +346,10 @@ namespace Rock.Model
             
             // ignoring SiteDomain,ModifiedByPersonAliasId 
             
+            // ignoring SystemEmail,CreatedByPersonAliasId 
+            
+            // ignoring SystemEmail,ModifiedByPersonAliasId 
+            
             // ignoring Tag,CreatedByPersonAliasId 
             
             // ignoring Tag,ModifiedByPersonAliasId 
@@ -417,7 +425,6 @@ namespace Rock.Model
             target.PersonId = source.PersonId;
             target.AliasPersonId = source.AliasPersonId;
             target.AliasPersonGuid = source.AliasPersonGuid;
-            target.Person = source.Person;
             target.Id = source.Id;
             target.Guid = source.Guid;
 

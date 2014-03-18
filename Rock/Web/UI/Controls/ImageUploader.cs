@@ -351,6 +351,33 @@ namespace Rock.Web.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Gets or sets the picture URL to use when there is no image selected
+        /// </summary>
+        /// <value>
+        /// The no picture URL.
+        /// </value>
+        public string NoPictureUrl
+        {
+            get
+            {
+                string nopictureUrl = ViewState["NoPictureUrl"] as string;
+                if ( string.IsNullOrWhiteSpace( nopictureUrl ) )
+                {
+                    return System.Web.VirtualPathUtility.ToAbsolute( "~/Assets/Images/no-picture.svg" );
+                }
+                else
+                {
+                    return nopictureUrl;
+                }
+            }
+
+            set
+            {
+                ViewState["NoPictureUrl"] = value;
+            }
+        }
+
         #endregion
 
         /// <summary>
@@ -411,7 +438,7 @@ namespace Rock.Web.UI.Controls
             }
             else
             {
-                _imgThumbnail.ImageUrl = "/Assets/Images/no-picture.svg";
+                _imgThumbnail.ImageUrl = this.NoPictureUrl;
                 _aRemove.Style[HtmlTextWriterStyle.Display] = "none";
             }
 
@@ -431,7 +458,7 @@ namespace Rock.Web.UI.Controls
 
             writer.Write( @"
                 <div class='js-upload-progress pull-left' style='display:none'>
-                    <i class='fa fa-spinner fa-3x fa-spin'></i>                    
+                    <i class='fa fa-refresh fa-3x fa-spin'></i>                    
                 </div>" );
             
             writer.AddAttribute( "class", "imageupload-dropzone" );
@@ -467,6 +494,7 @@ Rock.controls.imageUploader.initialize({{
     fileType: 'image',
     isBinaryFile: '{6}',
     rootFolder: '{7}',
+    noPictureUrl: '{10}',
     submitFunction: function (e, data) {{
         {8}
     }},
@@ -483,7 +511,8 @@ Rock.controls.imageUploader.initialize({{
                 this.IsBinaryFile ? "T" : "F",
                 Rock.Security.Encryption.EncryptString( this.RootFolder ),
                 this.SubmitFunctionClientScript,
-                this.DoneFunctionClientScript);
+                this.DoneFunctionClientScript,
+                this.NoPictureUrl);
             ScriptManager.RegisterStartupScript( _fileUpload, _fileUpload.GetType(), "ImageUploaderScript_" + this.ID, script, true );
         }
 

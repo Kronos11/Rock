@@ -90,12 +90,17 @@ namespace RockWeb.Blocks.Examples
         /// <summary>
         /// Holds a cached copy of the "start time" DateTime for any scheduleIds this block encounters.
         /// </summary>
-        private Dictionary<int, DateTime> scheduleTimes = new Dictionary<int, DateTime>();
+        private Dictionary<int, DateTime> _scheduleTimes = new Dictionary<int, DateTime>();
 
         /// <summary>
-        /// Holds a cached copy of the Ids for each person's Guid
+        /// Holds a cached copy of the Id for each person Guid
         /// </summary>
-        private Dictionary<Guid, int> peopleDictionary = new Dictionary<Guid, int>();
+        private Dictionary<Guid, int> _peopleDictionary = new Dictionary<Guid, int>();
+
+        /// <summary>
+        /// Holds a cached copy of the location Id for each family Guid
+        /// </summary>
+        private Dictionary<Guid, int> _familyLocationDictionary = new Dictionary<Guid, int>();
 
         /// <summary>
         /// Magic kiosk Id used for attendance data.
@@ -134,6 +139,8 @@ namespace RockWeb.Blocks.Examples
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
+            Server.ScriptTimeout = 300;
+            ScriptManager.GetCurrent(Page).AsyncPostBackTimeout = 300;
         }
 
         #endregion
@@ -157,7 +164,9 @@ namespace RockWeb.Blocks.Examples
                     nbMessage.Visible = true;
                     nbMessage.Title = "Success";
                     nbMessage.NotificationBoxType = NotificationBoxType.Success;
-                    nbMessage.Text = string.Format( "Happy tire-kicking! The data is in your database. Hint: try <a href='{0}'>searching for the Decker family</a>.", ResolveRockUrl( "~/Person/Search/name/Decker" ) );
+                    nbMessage.Text = string.Format( @"<p>Happy tire-kicking! The data is in your database. Hint: try <a href='{0}'>searching for the Decker family</a>.</p>
+                        <p>Here are some of the things you'll find in the sample data:</p>{1}"
+                        , ResolveRockUrl( "~/Person/Search/name/Decker" ), GetStories( saveFile ) );
                     bbtnLoadData.Visible = false;
                 }
             }
@@ -174,6 +183,24 @@ namespace RockWeb.Blocks.Examples
             {
                 File.Delete( saveFile );
             }
+        }
+
+        /// <summary>
+        /// Extract the stories out of the XML and put them on the results page.
+        /// </summary>
+        /// <param name="saveFile"></param>
+        /// <returns></returns>
+        protected string GetStories( string saveFile )
+        {
+            var xdoc = XDocument.Load( saveFile );
+            StringBuilder sb = new StringBuilder();
+            sb.Append( "<ul>" );
+            foreach ( var comment in xdoc.Element( "data" ).DescendantNodes().OfType<XComment>() )
+            {
+                sb.AppendFormat( "<li>{0}</li>", comment.ToString().Replace( "<!--", "").Replace( "-->", "" ) );
+            }
+            sb.Append( "</ul>" );
+            return sb.ToString();
         }
 
         /// <summary>
@@ -209,7 +236,7 @@ namespace RockWeb.Blocks.Examples
             }
             catch ( WebException ex )
             {
-                nbMessage.Text = ex.Message;
+                nbMessage.Text = string.Format( "While trying to fetch {0}, {1} ", fileUrl, ex.Message);
                 nbMessage.Visible = true;
             }
 
@@ -231,6 +258,7 @@ namespace RockWeb.Blocks.Examples
                 {
                     var elemFamilies = xdoc.Element( "data" ).Element( "families" );
                     var elemGroups = xdoc.Element( "data" ).Element( "groups" );
+                    var elemRelationships = xdoc.Element( "data" ).Element( "relationships" );
 
                     // First we'll clean up by deleting any previously created data such as
                     // families, addresses, people, photos, attendance data, etc.
@@ -239,9 +267,205 @@ namespace RockWeb.Blocks.Examples
 
                     // Now we can add the families (and people) and then groups.
                     AddFamilies( elemFamilies );
+                    AddRelationships( elemRelationships );
                     AddGroups( elemGroups );
                 }
             } );
+        }
+   
+        /// <summary>
+        /// Adds a KnownRelationship record between the two supplied Guids with the given 'is' relationship type:
+        ///     
+        ///     Role / inverse Role
+        ///     ================================
+        ///     step-parent     / step-child
+        ///     grandparent     / grandchild
+        ///     previous-spouse / previous-spouse
+        ///     can-check-in    / allow-check-in-by
+        ///     parent          / child
+        ///     sibling         / sibling
+        ///     invited         / invited-by
+        ///     related         / related
+        ///     
+        /// ...for xml such as:
+        /// <relationships>
+        ///     <relationship a="Ben" personGuid="3C402382-3BD2-4337-A996-9E62F1BAB09D"
+        ///     has="step-parent" forGuid="3D7F6605-3666-4AB5-9F4E-D7FEBF93278E" name="Brian" />
+        ///  </relationships>
+        ///  
+        /// </summary>
+        /// <param name="elemRelationships"></param>
+        private void AddRelationships( XElement elemRelationships )
+        {
+            if ( elemRelationships == null )
+            {
+                return;
+            }
+
+            Guid ownerRoleGuid = Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_OWNER.AsGuid();
+            Guid knownRelationshipsGroupTypeGuid = Rock.SystemGuid.GroupType.GROUPTYPE_KNOWN_RELATIONSHIPS.AsGuid();
+
+            var groupTypeRoles = new GroupTypeRoleService().Queryable("GroupType")
+                .Where( r => r.GroupType.Guid == knownRelationshipsGroupTypeGuid ).ToList();
+
+            // We have to create (or fetch existing) two groups for each relationship, adding the
+            // other person as a member of that group with the appropriate GroupTypeRole (GTR):
+            //   * a group with person as owner (GTR) and forPerson as type/role (GTR) 
+            //   * a group with forPerson as owner (GTR) and person as inverse-type/role (GTR)
+ 
+            foreach ( var elemRelationship in elemRelationships.Elements( "relationship" ) )
+            {
+                // skip any illegally formatted items
+                if ( elemRelationship.Attribute( "personGuid" ) == null || elemRelationship.Attribute( "forGuid" ) == null ||
+                    elemRelationship.Attribute( "has" ) == null )
+                {
+                    continue;
+                }
+
+                Guid personGuid = elemRelationship.Attribute( "personGuid" ).Value.Trim().AsGuid();
+                Guid forGuid = elemRelationship.Attribute( "forGuid" ).Value.Trim().AsGuid();
+                int ownerPersonId = _peopleDictionary[personGuid];
+                int forPersonId = _peopleDictionary[forGuid];
+
+                string rType = elemRelationship.Attribute( "has" ).Value.Trim();
+  
+                var memberService = new GroupMemberService();
+                int roleId = -1;
+
+                switch ( rType )
+                {
+                    case "step-parent":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_STEP_PARENT.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "step-child":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_STEP_CHILD.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "can-check-in":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_CAN_CHECK_IN.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "allow-check-in-by":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_ALLOW_CHECK_IN_BY.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "grandparent":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_GRANDPARENT.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "grandchild":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_GRANDCHILD.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "invited":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_INVITED.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "invited-by":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_INVITED_BY.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "previous-spouse":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_PREVIOUS_SPOUSE.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "sibling":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_SIBLING.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "parent":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_PARENT.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "child":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_CHILD.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    case "related":
+                        roleId = groupTypeRoles.Where( r => r.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_IMPLIED_RELATIONSHIPS_RELATED.AsGuid() )
+                            .Select( r => r.Id ).FirstOrDefault();
+                        break;
+
+                    default:
+                        //throw new NotSupportedException( string.Format( "unknown relationship type {0}", elemRelationship.Attribute( "has" ).Value ) );
+                        // just skip unknown relationship types
+                        continue;
+                }
+                
+                // find the person's KnownRelationship "owner" group
+                var group = memberService.Queryable()
+                    .Where( m =>
+                    m.PersonId == ownerPersonId &&
+                    m.GroupRole.Guid == ownerRoleGuid
+                    )
+                    .Select( m => m.Group )
+                    .FirstOrDefault();
+
+                // create it if it does not yet exist
+                if ( group == null )
+                {
+                    var ownerRole = new GroupTypeRoleService().Get( ownerRoleGuid );
+                    if ( ownerRole != null && ownerRole.GroupTypeId.HasValue )
+                    {
+                        var ownerGroupMember = new GroupMember();
+                        ownerGroupMember.PersonId = ownerPersonId;
+                        ownerGroupMember.GroupRoleId = ownerRole.Id;
+
+                        group = new Group();
+                        group.Name = ownerRole.GroupType.Name;
+                        group.GroupTypeId = ownerRole.GroupTypeId.Value;
+                        group.Members.Add( ownerGroupMember );
+
+                        var groupService = new GroupService();
+                        groupService.Add( group, CurrentPersonAlias );
+                        groupService.Save( group, CurrentPersonAlias );
+
+                        group = groupService.Get( group.Id );
+                    }
+                }
+
+                // Now find (and add if not found) the forPerson as a member with the "has" role-type
+                var groupMember = memberService.Queryable()
+                    .Where( m =>
+                        m.GroupId == group.Id &&
+                        m.PersonId == forPersonId &&
+                        m.GroupRoleId == roleId )
+                    .FirstOrDefault();
+
+                if ( groupMember == null )
+                {
+                    groupMember = new GroupMember()
+                    {
+                        GroupId = group.Id,
+                        PersonId = forPersonId,
+                        GroupRoleId = roleId,
+                    };
+                    memberService.Add( groupMember, CurrentPersonAlias );
+                }
+
+                memberService.Save( groupMember, CurrentPersonAlias );
+                
+                // now create thee inverse relationship
+                var inverseGroupMember = memberService.GetInverseRelationship(
+                    groupMember, createGroup: true, personAlias: CurrentPersonAlias );
+                if ( inverseGroupMember != null )
+                {
+                    memberService.Save( inverseGroupMember, CurrentPersonAlias );
+                }
+            }
         }
 
         /// <summary>
@@ -250,7 +474,6 @@ namespace RockWeb.Blocks.Examples
         /// <param name="elemFamilies"></param>
         private void AddFamilies( XElement elemFamilies )
         {
-            // Add families
             if ( elemFamilies == null )
             {
                 return;
@@ -279,9 +502,9 @@ namespace RockWeb.Blocks.Examples
                 foreach ( var p in family.Members )
                 {
                     // Put the person's id into the people dictionary for later use.
-                    if ( !peopleDictionary.ContainsKey( p.Person.Guid ) )
+                    if ( !_peopleDictionary.ContainsKey( p.Person.Guid ) )
                     {
-                        peopleDictionary.Add( p.Person.Guid, p.PersonId );
+                        _peopleDictionary.Add( p.Person.Guid, p.PersonId );
                     }
                 }
             }
@@ -334,7 +557,11 @@ namespace RockWeb.Blocks.Examples
                         break;
                     default:
                         throw new NotSupportedException( string.Format( "unknown group type {0}", elemGroup.Attribute( "type" ).Value.Trim() ) );
-                        break;
+                }
+
+                if ( elemGroup.Attribute( "description" ) != null )
+                {
+                    group.Description = elemGroup.Attribute( "description" ).Value;
                 }
 
                 if ( elemGroup.Attribute( "parentGroupGuid" ) != null )
@@ -343,6 +570,41 @@ namespace RockWeb.Blocks.Examples
                     group.ParentGroupId = parentGroup.Id;
                 }
 
+                // Set the group's meeting location
+                if ( elemGroup.Attribute( "meetsAtHomeOfFamily") != null )
+                {
+                    int meetingLocationValueId = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_MEETING_LOCATION.AsGuid() ).Id;
+                    var groupLocation = new GroupLocation()
+                    {
+                        IsMappedLocation = false,
+                        IsMailingLocation = false,
+                        GroupLocationTypeValueId = meetingLocationValueId,
+                        LocationId = _familyLocationDictionary[elemGroup.Attribute( "meetsAtHomeOfFamily" ).Value.AsGuid()],
+                    };
+
+                    // Set the group location's GroupMemberPersonId if given (required?)
+                    if ( elemGroup.Attribute( "meetsAtHomeOfPerson" ) != null )
+                    {
+                        groupLocation.GroupMemberPersonId = _peopleDictionary[elemGroup.Attribute( "meetsAtHomeOfPerson" ).Value.AsGuid()];
+                    }
+                    group.GroupLocations.Add( groupLocation );
+                }
+
+                group.LoadAttributes();
+
+                // Set the study topic
+                if ( elemGroup.Attribute( "studyTopic" ) != null )
+                {
+                    group.SetAttributeValue( "StudyTopic", elemGroup.Attribute( "studyTopic" ).Value );
+                }
+
+                // Set the meeting time
+                if ( elemGroup.Attribute( "meetingTime" ) != null )
+                {
+                    group.SetAttributeValue( "MeetingTime", elemGroup.Attribute( "meetingTime" ).Value );
+                }
+
+                // Add each person as a member
                 foreach ( var elemPerson in elemGroup.Elements( "person" ) )
                 {
                     Guid personGuid = elemPerson.Attribute( "guid" ).Value.Trim().AsGuid();
@@ -350,12 +612,14 @@ namespace RockWeb.Blocks.Examples
                     GroupMember groupMember = new GroupMember();
                     groupMember.GroupMemberStatus = GroupMemberStatus.Active;
                     groupMember.GroupRoleId = roleId ?? -1;
-                    groupMember.PersonId = peopleDictionary[personGuid];
+                    groupMember.PersonId = _peopleDictionary[personGuid];
                     group.Members.Add( groupMember );
                 }
 
                 groupService.Add( group );
                 groupService.Save( group, CurrentPersonAlias );
+                group.SaveAttributeValues( CurrentPersonAlias );
+
             }
         }
 
@@ -536,14 +800,20 @@ namespace RockWeb.Blocks.Examples
                 int.TryParse( elemFamily.Attribute( "percentAttendedRegularService" ).Value.Trim(), out pctAttendedRegularService );
             }
 
-            int scheduleId = 3;
+            int scheduleId = 13;
             if ( elemFamily.Attribute( "attendingScheduleId" ) != null )
             {
                 int.TryParse( elemFamily.Attribute( "attendingScheduleId" ).Value.Trim(), out scheduleId );
-                if ( ! scheduleTimes.ContainsKey(scheduleId) )
+                if ( ! _scheduleTimes.ContainsKey(scheduleId) )
                 {
                     Schedule schedule = new ScheduleService().Get( scheduleId );
-                    scheduleTimes.Add( scheduleId, schedule.GetCalenderEvent().DTStart.Value );
+                    if ( schedule == null )
+                    {
+                        // We're not going to continue if they are missing this schedule
+                        return;
+                    }
+
+                    _scheduleTimes.Add( scheduleId, schedule.GetCalenderEvent().DTStart.Value );
                 }
             }
 
@@ -551,10 +821,16 @@ namespace RockWeb.Blocks.Examples
             if ( elemFamily.Attribute( "attendingAltScheduleId" ) != null )
             {
                 int.TryParse( elemFamily.Attribute( "attendingAltScheduleId" ).Value.Trim(), out altScheduleId );
-                if ( ! scheduleTimes.ContainsKey( altScheduleId ) )
+                if ( ! _scheduleTimes.ContainsKey( altScheduleId ) )
                 {
                     Schedule schedule = new ScheduleService().Get( altScheduleId );
-                    scheduleTimes.Add( altScheduleId, schedule.GetCalenderEvent().DTStart.Value );
+                    if ( schedule == null )
+                    {
+                        // We're not going to continue if they are missing this schedule
+                        return;
+                    }
+
+                    _scheduleTimes.Add( altScheduleId, schedule.GetCalenderEvent().DTStart.Value );
                 }
             }
 
@@ -597,7 +873,7 @@ namespace RockWeb.Blocks.Examples
                 int plusMinus = ( _random.Next( 0, 4 ) == 0 ) ? 1 : -1;
                 int randomSeconds = _random.Next( 0, 60 );
 
-                var time = scheduleTimes[serviceSchedId];
+                var time = _scheduleTimes[serviceSchedId];
 
                 DateTime dtTime = new DateTime( date.Year, date.Month, date.Day, time.Hour, time.Minute, time.Second );
                 DateTime checkinDateTime = dtTime.AddMinutes( Convert.ToDouble( plusMinus * minutes ) ).AddSeconds( randomSeconds );
@@ -929,6 +1205,11 @@ namespace RockWeb.Blocks.Examples
         /// <param name="addresses"></param>
         private void AddFamilyAddresses( GroupService groupService, Group family, XElement addresses )
         {
+            if ( addresses == null || addresses.Elements( "address" ) == null )
+            {
+                return;
+            }
+
             // First add each person to the familyMembers collection
             foreach ( var addressElem in addresses.Elements( "address" ) )
             {
@@ -960,17 +1241,22 @@ namespace RockWeb.Blocks.Examples
 
                 groupService.AddNewFamilyAddress( family, locationTypeGuid, street1, street2, city, state, zip, CurrentPersonAlias );
 
-                // TODO add latitude and longitude
+                var location = family.GroupLocations.Where( gl => gl.Location.Street1 == street1 ).Select( gl => gl.Location ).FirstOrDefault();
+
+                // Set the address with the given latitude and longitude
                 double latitude;
                 double longitude;
                 if ( !string.IsNullOrEmpty( lat ) && !string.IsNullOrEmpty( lng )
-                    && double.TryParse( lat, out latitude ) && double.TryParse( lng, out longitude ) )
+                    && double.TryParse( lat, out latitude ) && double.TryParse( lng, out longitude )
+                    && location != null )
                 {
-                    var location = family.GroupLocations.Where( gl => gl.Location.Street1 == street1 ).Select( gl => gl.Location ).FirstOrDefault();
-                    if ( location != null )
-                    {
-                        location.SetLocationPointFromLatLong( latitude, longitude );
-                    }
+                    location.SetLocationPointFromLatLong( latitude, longitude );
+                }
+
+                // Put the location id into the dictionary for later use.
+                if ( location != null && !_familyLocationDictionary.ContainsKey( family.Guid ) )
+                {
+                    _familyLocationDictionary.Add( family.Guid, location.Id );
                 }
             }
         }
