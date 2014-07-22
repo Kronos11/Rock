@@ -233,6 +233,7 @@
     <Compile Include="Field\Types\WorkflowAttributeFieldType.cs" />
     <Compile Include="Model\CodeGenerated\PluginMigrationService.cs" />
     <Compile Include="Model\PluginMigration.cs" />
+    <Compile Include="Model\GroupTypePath.cs" />
     <Compile Include="Model\ScheduleService.Partial.cs" />
     <Compile Include="Model\WorkflowActionService.Partial.cs" />
     <Compile Include="Model\WorkflowActivityTypeService.Partial.cs" />

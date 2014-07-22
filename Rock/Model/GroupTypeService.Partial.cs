@@ -69,7 +69,7 @@ namespace Rock.Model
 
         /// <summary>
         /// Returns an enumerable collection of <see cref="Rock.Model.GroupType">GroupType</see> that are descendants of a specified group type.
-        /// WARNING: This will fail if their is a circular reference in the GroupTypeAssociation table.
+        /// WARNING: This will fail if there is a circular reference in the GroupTypeAssociation table.
         /// </summary>
         /// <param name="parentGroupTypeId">The parent group type identifier.</param>
         /// <returns>
@@ -88,6 +88,40 @@ namespace Rock.Model
                 SELECT *
                 FROM [GroupType]
                 WHERE [Id] IN ( SELECT [ChildGroupTypeId] FROM CTE )
+                ", parentGroupTypeId );
+        }
+
+        /// <summary>
+        /// Returns an enumerable collection of <see cref="Rock.Model.GroupTypePath">GroupTypePath</see> objects that are
+        /// associated descendants of a specified group type.
+        /// WARNING: This will fail if there is a circular reference in the GroupTypeAssociation table.
+        /// </summary>
+        /// <param name="parentGroupTypeId">The parent group type identifier.</param>
+        /// <returns>
+        /// An enumerable collection of <see cref="Rock.Model.GroupTypePath">GroupTypePath</see> objects.
+        /// </returns>
+        public IEnumerable<GroupTypePath> GetAllAssociatedDescendentsPath( int parentGroupTypeId )
+        {
+            return this.Context.Database.SqlQuery<GroupTypePath>(
+                @"
+                -- Get GroupType association heirarchy with GroupType ancestor path information
+                WITH CTE (ChildGroupTypeId,GroupTypeId, HierarchyPath) AS
+                (
+                      SELECT [ChildGroupTypeId], [GroupTypeId], CONVERT(nvarchar(500),GT.Name)
+                      FROM   [GroupTypeAssociation] GTA
+		                INNER JOIN [GroupType] GT ON GT.[Id] = GTA.[GroupTypeId]
+                      WHERE  [GroupTypeId] = {0}
+                      UNION ALL 
+                      SELECT
+                            GTA.[ChildGroupTypeId], GTA.[GroupTypeId], CONVERT(nvarchar(500), CTE.HierarchyPath + ' > ' + GT2.Name)
+                      FROM
+                            GroupTypeAssociation GTA
+		                INNER JOIN CTE ON CTE.[ChildGroupTypeId] = GTA.[GroupTypeId]
+		                INNER JOIN [GroupType] GT2 ON GT2.[Id] = GTA.[GroupTypeId]
+                )
+                SELECT GT3.Id as 'GroupTypeId', CONVERT(nvarchar(500), CTE.HierarchyPath + ' > ' + GT3.Name) AS 'Path'
+                FROM CTE
+                INNER JOIN [GroupType] GT3 ON GT3.[Id] = CTE.[ChildGroupTypeId]
                 ", parentGroupTypeId );
         }
 
