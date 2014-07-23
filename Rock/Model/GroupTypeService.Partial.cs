@@ -107,7 +107,7 @@ namespace Rock.Model
                 -- Get GroupType association heirarchy with GroupType ancestor path information
                 WITH CTE (ChildGroupTypeId,GroupTypeId, HierarchyPath) AS
                 (
-                      SELECT [ChildGroupTypeId], [GroupTypeId], CONVERT(nvarchar(500),GT.Name)
+                      SELECT [ChildGroupTypeId], [GroupTypeId], CONVERT(nvarchar(500),'')
                       FROM   [GroupTypeAssociation] GTA
 		                INNER JOIN [GroupType] GT ON GT.[Id] = GTA.[GroupTypeId]
                       WHERE  [GroupTypeId] = {0}
@@ -119,7 +119,7 @@ namespace Rock.Model
 		                INNER JOIN CTE ON CTE.[ChildGroupTypeId] = GTA.[GroupTypeId]
 		                INNER JOIN [GroupType] GT2 ON GT2.[Id] = GTA.[GroupTypeId]
                 )
-                SELECT GT3.Id as 'GroupTypeId', CONVERT(nvarchar(500), CTE.HierarchyPath + ' > ' + GT3.Name) AS 'Path'
+                SELECT GT3.Id as 'GroupTypeId', SUBSTRING( CONVERT(nvarchar(500), CTE.HierarchyPath + ' > ' + GT3.Name), 3, 500) AS 'Path'
                 FROM CTE
                 INNER JOIN [GroupType] GT3 ON GT3.[Id] = CTE.[ChildGroupTypeId]
                 ", parentGroupTypeId );

@@ -19,7 +19,7 @@
                     </Rock:GridFilter>
                     <Rock:Grid ID="gGroupLocationSchedule" runat="server" AllowSorting="true" AllowPaging="false" OnRowDataBound="gGroupLocationSchedule_RowDataBound" >
                         <Columns>
-		                    <asp:TemplateField HeaderText="Group w/Path" SortExpression="Group.Name">
+		                    <asp:TemplateField HeaderText="Group" SortExpression="Group.Name">
 		                        <ItemTemplate>
 		                            <%#Eval("GroupName")%><br />
 		                            <small><%#Eval("Path")%></small>
