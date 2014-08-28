@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.Entity;
+using System.Data.Entity.Migrations.Infrastructure;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -67,6 +68,11 @@ namespace RockWeb
 
         // cache callback object
         private static CacheItemRemovedCallback OnCacheRemove = null;
+
+        /// <summary>
+        /// The startup exception
+        /// </summary>
+        public static Exception StartupException = null;
 
         #endregion
 
@@ -517,29 +523,38 @@ namespace RockWeb
         /// <returns>True if at least one migration was run</returns>
         public bool MigrateDatabase( RockContext rockContext )
         {
-            bool result = false;
+            bool result = false; 
 
             var fileInfo = new FileInfo( Server.MapPath( "~/App_Data/Run.Migration" ) );
             if ( fileInfo.Exists )
             {
-                Database.SetInitializer( new MigrateDatabaseToLatestVersion<Rock.Data.RockContext, Rock.Migrations.Configuration>() );
+                // set database initializer to null so we can initialize it manually
+                Database.SetInitializer<Rock.Data.RockContext>( null );
 
                 // explictly check if the database exists, and force create it if doesn't exist
                 if ( !rockContext.Database.Exists() )
                 {
-                    // If database did not exist, initialize a database (which runs existing Rock migrations)
+                    // If database did not exist, create the database, but don't run any migrations
                     rockContext.Database.Initialize( true );
-                    result = true;
                 }
-                else
+                
+                // run any pending Rock migrations
+                var migrator = new System.Data.Entity.Migrations.DbMigrator( new Rock.Migrations.Configuration() );
+                var logger = new Rock.Migrations.RockMigrationsLogger();
+                MigratorLoggingDecorator migratorWithLogging = new MigratorLoggingDecorator( migrator, logger );
+                if ( migratorWithLogging.GetPendingMigrations().Any() )
                 {
-                    // If database does exist, run any pending Rock migrations
-                    var migrator = new System.Data.Entity.Migrations.DbMigrator( new Rock.Migrations.Configuration() );
-                    if ( migrator.GetPendingMigrations().Any() )
+                    try
                     {
-                        migrator.Update();
-                        result = true;
+                        migratorWithLogging.Update();
                     }
+                    catch (Exception ex)
+                    {
+                        throw new Exception( string.Format( "Core Migration error occurred at {0}",
+                                                        logger.InfoMessages.Last() ), ex );
+                    }
+
+                    result = true;
                 }
 
                 fileInfo.Delete();
@@ -850,9 +865,11 @@ namespace RockWeb
             var all = Rock.Web.Cache.FieldTypeCache.All();
         }
 
-        private void Error66( Exception ex )
+        private void Error66( Exception ex )  
         {
             LogError( ex, HttpContext.Current );
+
+            Global.StartupException = ex;
 
             if ( HttpContext.Current != null && HttpContext.Current.Session != null )
             {

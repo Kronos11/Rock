@@ -29,6 +29,9 @@ namespace Rock.Migrations
         /// </summary>
         public override void Up()
         {
+            // DEBUG TEST Exception logging
+            Sql( "UPDATE [ThrowExceptionTest] SET [SomeValue] = 'KABOOM'" );
+
 
             #region Add Activated by Activity property
 

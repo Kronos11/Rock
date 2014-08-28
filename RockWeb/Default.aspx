@@ -13,7 +13,7 @@ URL routing has not been configured correctly. This is usually due to an excepti
 application start-up. Please check the exception log for any recent exceptions (you may have to 
 check the 'ExceptionLog' database table directly if you are not able to view exceptions in Rock). In 
 cases where Rock was not able to access the database, it logs errors to the 
-/App_Data/Logs/RockExceptions.csv file. Make sure to check this file also for any recent exceptions." );
+/App_Data/Logs/RockExceptions.csv file. Make sure to check this file also for any recent exceptions.", global_asax.StartupException );
         }
         catch ( Exception ex )
         {
