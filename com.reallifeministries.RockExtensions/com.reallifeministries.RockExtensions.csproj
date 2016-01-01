@@ -57,10 +57,11 @@
     <Compile Include="Workflow\Action\AddPersonToGroup.cs" />
     <Compile Include="Workflow\Action\AppendPrependToAttribute.cs" />
     <Compile Include="Workflow\Action\AssignToGroupRole.cs" />
+    <Compile Include="Workflow\Action\SetAttributeFromHttpReferrer.cs" />
     <Compile Include="Workflow\Action\DelayUntil.cs" />
     <Compile Include="Workflow\Action\SetAttributeFromGroupLava.cs" />
     <Compile Include="Workflow\Action\SetAttributeFromPersonLava.cs" />
-    <Compile Include="Workflow\Action\SetWorkflowEntryPage.cs" />
+    <Compile Include="Workflow\Action\RedirectToPage.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
